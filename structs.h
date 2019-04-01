@@ -9,15 +9,51 @@
 
 
 typedef struct TLV {
-	char type;
-	char length;
-	char body[4078];
+	short type;
+	short length;
+		union{	
+			struct{
+				char mbz[4078];
+			}PadN;
+			
+			struct{
+				char sourceid[8];
+				char destinationid[8];
+			}Hello;
+
+			struct{
+				char ip[16];
+				char port[2];
+			}Neighbour;
+
+			struct{
+				char senderid[8];
+				char nonce[4];
+				short type;
+				char data[4065];
+			}Data;
+
+			struct{
+				char senderid[8];
+				char nonce[4];
+			}Ack;
+
+			struct{
+				short code;
+				char message[4077];
+			}GoAway;
+
+			struct{
+				char message[4078];
+			}Warning;
+
+		}body;
 }TLV;
 
 typedef struct Header {
 	char magic;
 	char version;
-	char bodylen[16];
+	char bodylen[2];
 }Header;
 
 typedef struct Datagramme{

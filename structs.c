@@ -15,6 +15,8 @@ Voisins *newVoisin(int id, int port){
 	snprintf(voisin->id,8,"%d",id);
 	snprintf(voisin->port,5,"%d",port);
 	
+
+	
 	voisin->next=NULL;
 
 	return voisin;

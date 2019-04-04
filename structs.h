@@ -66,8 +66,7 @@ typedef struct Voisins{
 	char id[8];
 	char port[5];
 	int symetrique;
-	//La taille/type/format de ces deux là vont devoir être changé, car ils sont censé représenté un temps
-	//Mais normalement ça sera grâce au time.h
+
 	time_t shorthello;
 	time_t longhello;
 	struct Voisins *next;

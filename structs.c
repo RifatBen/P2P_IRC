@@ -65,10 +65,12 @@ void checkRecieved (TLV tlv){
 		//Warning
 		case 7 : 
 		//Montrer le message warning
+		printf("Un message d'erreur : \n");
 		break;
 
 		//0, PadN ou autres
 		default : 
+		printf("Un packet à ignorer a été reçu\n");
 		//a Ignorer
 		break;
 	}

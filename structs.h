@@ -1,41 +1,36 @@
 #ifndef structs_h
 #define structs_h
 
-#include "stdio.h"
-#include "time.h"
-#include "stdlib.h"
-#include "string.h"
-#include <arpa/inet.h>
-
+#include "includes.h"
 
 typedef struct TLV {
-	short type;
-	short length;
+	unsigned char type;
+	unsigned char length;
 		union{	
 			struct{
-				char mbz[4078];
+				unsigned char mbz[4078];
 			}PadN;
 			
 			struct{
-				char sourceid[8];
-				char destinationid[8];
+				unsigned char sourceid[8];
+				unsigned char destinationid[8];
 			}Hello;
 
 			struct{
-				char ip[16];
-				char port[2];
+				unsigned char ip[16];
+				unsigned char port[2];
 			}Neighbour;
 
 			struct{
-				char senderid[8];
-				char nonce[4];
+				unsigned char senderid[8];
+				unsigned char nonce[4];
 				short type;
 				char data[4065];
 			}Data;
 
 			struct{
-				char senderid[8];
-				char nonce[4];
+				unsigned char senderid[8];
+				unsigned char nonce[4];
 			}Ack;
 
 			struct{
@@ -51,9 +46,9 @@ typedef struct TLV {
 }TLV;
 
 typedef struct Header {
-	char magic;
-	char version;
-	char bodylen[2];
+	unsigned char magic;
+	unsigned char version;
+	unsigned char bodylen[2];
 }Header;
 
 typedef struct Datagramme{
@@ -63,9 +58,9 @@ typedef struct Datagramme{
 
 
 typedef struct Voisins{
-	char id[8];
-	char port[5];
-	int symetrique;
+	unsigned char id[8];
+	unsigned char port[5];
+	unsigned char symetrique;
 
 	time_t shorthello;
 	time_t longhello;
@@ -75,13 +70,12 @@ typedef struct Voisins{
 
 
 typedef struct Peer{
-	char id[8];
+	unsigned char id[8];
 	struct Voisins *potentiel;
 	struct Voisins *recent;
 }Peer;
 
 
-TLV *newTLV(int type, int length, char *body);
-Voisins *newVoisin(int id, int port);
+Voisins *newVoisin(uint8_t id, uint8_t port);
 
 #endif

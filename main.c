@@ -46,18 +46,16 @@ int main(){
 
   //On crée notre TLV Hello court (Ou nimporte quel autre TLV grace aux fonctions dont on dispose)
   TLV tlv;
-  newHelloCourt(&tlv,256);
+  newHelloCourt(&tlv,20);
 
   //On crée la requête avec notre tlv
   createRequest(req,tlv);
 
   //TLV
-  int lenreq = strlen(req);
-  
-
+  int lenreq = sizeof(req)/sizeof(unsigned char);
 
    // Et on l'envoie à un pair
-  sendto(s,req,REQ_SIZE, 0, &peer, peer_size);
+  sendto(s,req,lenreq, 0, &peer, peer_size);
   printf("\nEnvoi effectué\n");	
   while(1) {
 

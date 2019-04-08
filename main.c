@@ -9,7 +9,6 @@
 
 void fillSocket(struct sockaddr_in6 * peer);
 
-void createRequest(unsigned char *req, TLV tlv);
 
 int main(){
 	unsigned char req[REQ_SIZE] = {0};

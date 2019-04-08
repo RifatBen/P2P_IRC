@@ -30,5 +30,7 @@ void newData(TLV *message, uint64_t senderid, uint32_t nonce, unsigned char type
 void newAck(TLV *message, uint64_t senderid, uint64_t nonce);
 
 
+
+void createRequest(unsigned char *req, TLV tlv);
 void checkRecieved (TLV tlv);
 #endif

@@ -9,20 +9,39 @@ void checkRecieved (TLV tlv){
 
 		//Hello
 		case 2 :
-		//Si court 
-			//On ajoute aux voisins récents.
-		//Si long
-			//Si destId = notre id, on ajoute aux voisins symmétriques
-			//Sinon on garde dans les voisins récents
+		if(tlv.length==8 && tlv.body.Hello.sourceid[8]){//si Hello Court
+		Peer *p;
+		p->recent->id=tlv.body.Hello.sourceid[8];//On ajoute aux voisins récents.
+		}
+		else if(tlv.length==16 && tlv.body.Hello.sourceid[8]){//Si long
+			if(tlv.body.Hello.destinationid[8]==tlv.body.Hello.sourceid[8]){//Si destId = notre id, on ajoute aux voisins symmétriques
+				Voisins *v;
+				v->symetrique=tlv.body.Hello.sourceid[8];
+			}else{//Sinon on garde dans les voisins récents
+				Peer *p;
+				p->recent->id=tlv.body.Hello.sourceid[8];				
+			}
+		}
 		//Si le voisin est déjà dans la liste des voisins récents on ne fait rien
 		break;
 
 		//Neighbor
 		case 3 :
+		//Ce TLV indique que le récepteur a une relation de voisinage symétrique avec un pair à l’adresseIPet écoutant sur le port UDPPort. Les adresses IPv6 sont représentées telles quelles, les adressesIPv4 sont représentées sous formeIPv4-Mapped(dans le préfixe::FFFF:0:0/96).
 		break;
 
 		//data
 		case 4 :
+		
+
+
+
+
+
+
+
+
+
 		//Traiter le Data
 		//Envoyer un ack a l'envoyeur
 		break;
@@ -64,13 +83,13 @@ void checkRecieved (TLV tlv){
 
 
 
-void createRequest(unsigned char *req, TLV tlv){
+void createRequest(unsigned char *req, TLV tlv){// Datagramme-->Magic,Version,Body(type,longeur,valeur d'un corp de TLV)
 	    //Header
   req[0] = 93; //Magic
   req[1] = 2; //Version
   numberToByte(tlv.length + 2, req+2, 16);
   req[4] = tlv.type;
-  req[5] = tlv.length;
+  req[5] = tlv.length;//(longueur du corp sans type et longueur)
   for(int i = 0;i<tlv.length;i++){
   	req[i+6] = tlv.body.Hello.sourceid[i];
   }
@@ -107,7 +126,7 @@ void newHelloCourt(TLV *message, uint64_t id){
 
 	message->type = 2;
 	message->length = 8;
-	numberToByte(id,message->body.Hello.sourceid,64);
+	numberToByte(id,message->body.Hello.sourceid,64);//convertir un nombre ne byte
 }	
 
 
@@ -145,7 +164,7 @@ void newAck(TLV *message, uint64_t senderid, uint64_t nonce){
 } 
 
 //Convertie un nombre en Unsigned Char Big Endian
-void numberToByte(uint64_t number, unsigned char *req,  int size){
+void numberToByte(uint64_t number, unsigned char *req,  int size){//Le mode big endian accélère les opérations qui nécessitent de regarder en premier les bits de poids forts comme la recherche du signe, la comparaison de deux entiers et la division.
 	int j=0;
 	for(int i = size-8; i>=0; i-=8){
 		req[j] = number >> i;
@@ -155,7 +174,7 @@ void numberToByte(uint64_t number, unsigned char *req,  int size){
 
 
 //Convertie un nombre dans un unsigned char (format big endian) en un nombre (uint64)
-uint64_t byteToNumber(unsigned char *req, int size){
+uint64_t byteToNumber(unsigned char *req, int size){//
 	uint64_t num = 0;
 	int j=0;
 	for(int i=size-8;i>=0;i-=8){

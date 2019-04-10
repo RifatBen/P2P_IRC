@@ -1,27 +1,47 @@
 #include "requestHandler.h"
+#include "struct.h"
+
+
+
+
+
+
+
+
+
+int Verif(char *req,int length_TLV){
+	if(req[0]==93 && req[1]==2){
+	uint64_t body_length = byteToNumber(req+2,16);//retourn le num en 64bits (donc 8 octets )
+	int taille=sizeof(req)/sizeof(req[1]);
+		if(taille-body_length-4==taille){
+			if(length_TLV==body_length-2){//le body_TLV longueur du TLV entier
+				return 1;
+			}else{
+				return 0;
+			}
+		return 0;
+		}
+	}else{
+	
+	return 0;
+}
+					
+	
 
 
 
 
 //Des futures réactions lors des récéptions de TLVs
-void checkRecieved (TLV tlv){
+void checkRecieved (TLV tlv,struct sockaddr_in6 peer){
 	switch(tlv.type){
 
 		//Hello
 		case 2 :
-		if(tlv.length==8 && tlv.body.Hello.sourceid[8]){//si Hello Court
-		Peer *p;
-		p->recent->id=tlv.body.Hello.sourceid[8];//On ajoute aux voisins récents.
-		}
-		else if(tlv.length==16 && tlv.body.Hello.sourceid[8]){//Si long
-			if(tlv.body.Hello.destinationid[8]==tlv.body.Hello.sourceid[8]){//Si destId = notre id, on ajoute aux voisins symmétriques
-				Voisins *v;
-				v->symetrique=tlv.body.Hello.sourceid[8];
-			}else{//Sinon on garde dans les voisins récents
-				Peer *p;
-				p->recent->id=tlv.body.Hello.sourceid[8];				
-			}
-		}
+		unsigned char req[REQ_SIZE] = {0};
+		createRequest(req,tlv);
+		if( Verif(req,tlv.length) ){
+			if(tlv.length==8){
+				newVoisins(numbertoByte(tlv.body.Hello.sourceid[8],),peer.sin6_port)
 		//Si le voisin est déjà dans la liste des voisins récents on ne fait rien
 		break;
 

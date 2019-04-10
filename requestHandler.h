@@ -1,7 +1,7 @@
 #ifndef requestHandler_h
 #define requestHandler_h
 
-
+#include "stdint.h"
 #include "includes.h"
 #include "structs.h"
 

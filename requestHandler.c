@@ -28,13 +28,21 @@ int Verif(char *req,int length_TLV){
 
 //Des futures réactions lors des récéptions de TLVs
 void checkRecieved (TLV tlv,struct sockaddr_in6 peer){
-	switch(tlv.type){
-
+	if( Verif(req,tlv.length) ){
+		switch(tlv.type){
 		//Hello
 		case 2 :
-		if( Verif(req,tlv.length) ){
-			if(tlv.length==8){
-				newVoisin(numberToByte(tlv.body.Hello.sourceid[8],),peer.sin6_port)
+		Voisins *v;
+		if(tlv.length==8){
+				v=newVoisins(numberToByte(tlv.body.Hello.sourceid+8,128),peer.sin6_port);
+				//addVoisin(p.recent,v);
+
+				
+			}else if(tlv.length=16){
+					v=newVoisins(numberToByte(tlv.body.Hello.sourceid+8,128),peer.sin6_port);
+					v->symetrique=1;
+						//addVoisin(p.recent,v);
+			}
 		//Si le voisin est déjà dans la liste des voisins récents on ne fait rien
 		break;
 

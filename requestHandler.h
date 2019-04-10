@@ -1,13 +1,10 @@
 #ifndef requestHandler_h
 #define requestHandler_h
 
-#include "stdint.h"
 #include "includes.h"
 #include "structs.h"
 
 
-typedef __int128 int128_t;
-typedef unsigned __int128 uint128_t;
 
 
 
@@ -34,5 +31,5 @@ void newAck(TLV *message, uint64_t senderid, uint64_t nonce);
 
 int Verif(char *req,int length_TLV);
 void createRequest(unsigned char *req, TLV tlv);
-void checkRecieved (TLV tlv);
+void checkRecieved (TLV tlv,struct sockaddr_in6 peer);
 #endif

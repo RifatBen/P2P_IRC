@@ -1,5 +1,4 @@
 #include "requestHandler.h"
-// #include "structs.h"
 
 
 
@@ -13,53 +12,57 @@ int Verif(char *req,int length_TLV){
 	if(req[0]==93 && req[1]==2){
 	uint64_t body_length = byteToNumber(req+2,16);//retourn le num en 64bits (donc 8 octets )
 	int taille=sizeof(req)/sizeof(req[1]);
-		if(taille-body_length-4==taille){
+	if(taille-body_length-4==taille){
 			if(length_TLV==body_length-2)//le body_TLV longueur du TLV entier
 				return 1;
 		}
 
-	return 0;
-}
-					
-	
+		return 0;
+	}
+
 
 
 
 
 //Des futures réactions lors des récéptions de TLVs
-void checkRecieved (TLV tlv,struct sockaddr_in6 peer){
-	if( Verif(req,tlv.length) ){
-		switch(tlv.type){
+	void checkRecieved (TLV tlv,struct sockaddr_in6 peer){
+		if( Verif(req,tlv.length) ){
+			switch(tlv.type){
+
+
 		//Hello
-		case 2 :
-		Voisins *v;
-		if(tlv.length==8){
-				v=newVoisins(numberToByte(tlv.body.Hello.sourceid+8,128),peer.sin6_port);
-				//addVoisin(p.recent,v);
+				case 2 :
+				{
+				Voisins *v;
+				if(tlv.length==8){
+					v=newVoisin(byteToNumber(tlv.body.Hello.sourceid+8,128),peer.sin6_port);
+					addVoisin(p.recent,v);
 
-				
-			}else if(tlv.length=16){
-					v=newVoisins(numberToByte(tlv.body.Hello.sourceid+8,128),peer.sin6_port);
+				}
+				else if(tlv.length=16){
+					v=newVoisin(byteToNumber(tlv.body.Hello.sourceid+8,128),peer.sin6_port);
 					v->symetrique=1;
-						//addVoisin(p.recent,v);
-			}
+					addVoisin(p.recent,v);
+				}
 		//Si le voisin est déjà dans la liste des voisins récents on ne fait rien
-		break;
+				break;
+				}
 
-		
+
+
 		//Neighbor
-		case 3 :
-		{
-		uint128_t ip = byteToNumber(req+6,128);
-		uint16_t port = byteToNumber(req+22,16);
-		Voisins *voisin = newVoisin(ip,port);
-		//addVoisin(peer->potentiels,voisin);
-		
+				case 3 :
+				{
+					uint128_t ip = byteToNumber(req+6,128);
+					uint16_t port = byteToNumber(req+22,16);
+					Voisins *voisin = newVoisin(ip,port);
+					//addVoisin(peer->potentiels,voisin);
+
 
 
 		//Ce TLV indique que le récepteur a une relation de voisinage symétrique avec un pair à l’adresseIPet écoutant sur le port UDPPort. Les adresses IPv6 sont représentées telles quelles, les adressesIPv4 sont représentées sous formeIPv4-Mapped(dans le préfixe::FFFF:0:0/96).
-		break;
-		}
+					break;
+				}
 
 
 
@@ -67,12 +70,12 @@ void checkRecieved (TLV tlv,struct sockaddr_in6 peer){
 
 
 		//data
-		case 4 :
-		{
+				case 4 :
+				{
 
 		//Traiter le Data
-		uint64_t id = byteToNumber(tlv.body.Data.senderid,64);
-		uint32_t nonce = byteToNumber(tlv.body.Data.nonce,32);
+					uint64_t id = byteToNumber(tlv.body.Data.senderid,64);
+					uint32_t nonce = byteToNumber(tlv.body.Data.nonce,32);
 		//vérifier dans la liste de données réçues la pair (id,nonce)
 
 		//Si ce n'est pas le cas, on affiche 
@@ -80,21 +83,21 @@ void checkRecieved (TLV tlv,struct sockaddr_in6 peer){
 
 
 		//Si c'est le cas : 
-			TLV tlv;
-			newAck(&tlv,id,nonce);
+					TLV tlv;
+					newAck(&tlv,id,nonce);
 
 
 		//Envoyer un ack a l'envoyeur
 		//sendRequest(tlv);
-		break;
-	}
+					break;
+				}
 		//ack
-		case 5 : 
+				case 5 : 
 		//On supprime des voisins à innonder		
-		break;
+				break;
 
 		//Goaway
-		case 6 : 
+				case 6 : 
 		//Réagir en fonction du code reçu
 		//Si code == 1 : On retire l'emetteur des voisins
 		//Si code == 2 : Envoyer un hello long
@@ -102,22 +105,23 @@ void checkRecieved (TLV tlv,struct sockaddr_in6 peer){
 
 		//Retirer le recepteur des voisins symmétriques/ou retirer de la liste tout court
 		//LE garder dans les potentiels voisins
-		break;
+				break;
 
 		//Warning
-		case 7 : 
+				case 7 : 
 		//Montrer le message warning
-		printf("Un message d'erreur : \n");
-		break;
+				printf("Un message d'erreur : \n");
+				break;
 
 		//0, PadN ou autres
-		default : 
-		printf("Un packet à ignorer a été reçu\n");
+				default : 
+				printf("Un packet à ignorer a été reçu\n");
 		//a Ignorer
-		break;
+				break;
+			}
+		}
 	}
 }
-
 
 
 
@@ -214,6 +218,7 @@ void numberToByte(uint64_t number, unsigned char *req,  int size){//Le mode big 
 		j++;
 	}
 }
+
 
 
 //Convertie un nombre dans un unsigned char (format big endian) en un nombre (uint64)

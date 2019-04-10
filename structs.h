@@ -3,6 +3,10 @@
 
 #include "includes.h"
 
+
+typedef __int128 int128_t;
+typedef unsigned __int128 uint128_t;
+
 typedef struct TLV {
 	unsigned char type;
 	unsigned char length;
@@ -66,17 +70,26 @@ typedef struct Voisins{
 	time_t shorthello;
 	time_t longhello;
 	struct Voisins *next;
+	struct Voisins *last;
 
 }Voisins;
 
 
 typedef struct Peer{
-	unsigned char id[8];
+	uint128_t id;
 	struct Voisins *potentiel;
 	struct Voisins *recent;
 }Peer;
 
 
+
+extern Peer p;
+
+
 Voisins *newVoisin(uint8_t id, uint8_t port);
+
+void addVoisin(Voisins *list, Voisins *newVoisin);
+
+void initPeer(Peer *p);
 
 #endif

@@ -1,6 +1,7 @@
 #define _GNU_SOURCE
 
 #include "includes.h"
+#include "structs.h"
 #include "requestHandler.h"
 
 #define BUF_SIZE 1024
@@ -9,8 +10,15 @@
 
 void fillSocket(struct sockaddr_in6 * peer);
 
+Peer p;
+
 
 int main(){
+
+
+initPeer(&p);
+
+
 	unsigned char req[REQ_SIZE] = {0};
 
 	unsigned char buf [BUF_SIZE] = {0}; // Buffer de réception
@@ -69,6 +77,13 @@ int main(){
     // Affichage de la requête reçu
     printf("\nMessage reçu\n");
     for (int i = 0 ; i < rc ; i++) { printf("%.2d ", buf[i]); }
+
+      //Décomposer la requete reçue, c'est à dire faire transformer la requete unsigned char en TLV (byteToNumber & numberToByte)  <---------- dans une fonction
+      //TLV tlv;
+      //void fonctionQuiDécompose(buf,&tlv); <-- a l'intérieur : un switch sur le type du paquet reçu
+
+      //checkreiceve(TLV, peer) <- peer représente le sockaddr_in6 qu'on a utilisé dans recvfrom
+
 
   }
 

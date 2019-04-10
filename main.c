@@ -46,7 +46,7 @@ int main(){
 
   //On crée notre TLV Hello court (Ou nimporte quel autre TLV grace aux fonctions dont on dispose)
   TLV tlv;
-  newHelloCourt(&tlv,20);
+  newHelloCourt(&tlv,1024);
 
   //On crée la requête avec notre tlv
   createRequest(req,tlv);

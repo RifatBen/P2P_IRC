@@ -1,5 +1,5 @@
 #include "requestHandler.h"
-#include "struct.h"
+// #include "structs.h"
 
 
 
@@ -14,15 +14,10 @@ int Verif(char *req,int length_TLV){
 	uint64_t body_length = byteToNumber(req+2,16);//retourn le num en 64bits (donc 8 octets )
 	int taille=sizeof(req)/sizeof(req[1]);
 		if(taille-body_length-4==taille){
-			if(length_TLV==body_length-2){//le body_TLV longueur du TLV entier
+			if(length_TLV==body_length-2)//le body_TLV longueur du TLV entier
 				return 1;
-			}else{
-				return 0;
-			}
-		return 0;
 		}
-	}else{
-	
+
 	return 0;
 }
 					
@@ -37,37 +32,57 @@ void checkRecieved (TLV tlv,struct sockaddr_in6 peer){
 
 		//Hello
 		case 2 :
-		unsigned char req[REQ_SIZE] = {0};
-		createRequest(req,tlv);
 		if( Verif(req,tlv.length) ){
 			if(tlv.length==8){
-				newVoisins(numbertoByte(tlv.body.Hello.sourceid[8],),peer.sin6_port)
+				newVoisin(numberToByte(tlv.body.Hello.sourceid[8],),peer.sin6_port)
 		//Si le voisin est déjà dans la liste des voisins récents on ne fait rien
 		break;
 
+		
 		//Neighbor
 		case 3 :
-		//Ce TLV indique que le récepteur a une relation de voisinage symétrique avec un pair à l’adresseIPet écoutant sur le port UDPPort. Les adresses IPv6 sont représentées telles quelles, les adressesIPv4 sont représentées sous formeIPv4-Mapped(dans le préfixe::FFFF:0:0/96).
-		break;
-
-		//data
-		case 4 :
+		{
+		uint128_t ip = byteToNumber(req+6,128);
+		uint16_t port = byteToNumber(req+22,16);
+		Voisins *voisin = newVoisin(ip,port);
+		//addVoisin(peer->potentiels,voisin);
 		
 
 
+		//Ce TLV indique que le récepteur a une relation de voisinage symétrique avec un pair à l’adresseIPet écoutant sur le port UDPPort. Les adresses IPv6 sont représentées telles quelles, les adressesIPv4 sont représentées sous formeIPv4-Mapped(dans le préfixe::FFFF:0:0/96).
+		break;
+		}
 
 
 
 
 
 
+		//data
+		case 4 :
+		{
 
 		//Traiter le Data
-		//Envoyer un ack a l'envoyeur
-		break;
+		uint64_t id = byteToNumber(tlv.body.Data.senderid,64);
+		uint32_t nonce = byteToNumber(tlv.body.Data.nonce,32);
+		//vérifier dans la liste de données réçues la pair (id,nonce)
 
+		//Si ce n'est pas le cas, on affiche 
+			//printf();
+
+
+		//Si c'est le cas : 
+			TLV tlv;
+			newAck(&tlv,id,nonce);
+
+
+		//Envoyer un ack a l'envoyeur
+		//sendRequest(tlv);
+		break;
+	}
 		//ack
 		case 5 : 
+		//On supprime des voisins à innonder		
 		break;
 
 		//Goaway
@@ -203,9 +218,8 @@ uint64_t byteToNumber(unsigned char *req, int size){//
 	}
 
 	return num;
-		
-}
 
+}
 
 
 

@@ -58,8 +58,9 @@ typedef struct Datagramme{
 
 
 typedef struct Voisins{
-	uint64_t id[8];
-	unsigned char port[5];
+	unsigned char ip[16];
+	uint64_t id;
+	uint16_t port;
 	short symetrique;
 
 	time_t shorthello;

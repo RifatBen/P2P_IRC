@@ -1,7 +1,7 @@
 #ifndef requestHandler_h
 #define requestHandler_h
 
-
+#include "stdint.h"
 #include "includes.h"
 #include "structs.h"
 
@@ -31,6 +31,8 @@ void newAck(TLV *message, uint64_t senderid, uint64_t nonce);
 
 
 
+
+int Verif(char *req,int length_TLV);
 void createRequest(unsigned char *req, TLV tlv);
 void checkRecieved (TLV tlv);
 #endif

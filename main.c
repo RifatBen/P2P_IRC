@@ -18,7 +18,6 @@ int main(){
 
 initPeer(&p);
 
-
 	unsigned char req[REQ_SIZE] = {0};
 
 	unsigned char buf [BUF_SIZE] = {0}; // Buffer de réception
@@ -63,9 +62,9 @@ initPeer(&p);
   int lenreq = sizeof(req)/sizeof(unsigned char);
 
    // Et on l'envoie à un pair
-  sendto(s,req,lenreq, 0, &peer, peer_size);
-  printf("\nEnvoi effectué\n");	
   while(1) {
+  sendto(s,req,lenreq, 0, &peer, peer_size);
+  printf("\nEnvoi effectué\n"); 
 
     // Réception d'une requête
     rc = recvfrom(s, buf, BUF_SIZE,0,&peer, &peer_size);
@@ -77,12 +76,19 @@ initPeer(&p);
     // Affichage de la requête reçu
     printf("\nMessage reçu\n");
     for (int i = 0 ; i < rc ; i++) { printf("%.2d ", buf[i]); }
+      //On vérifie si la requête est bien formée
+      
+      if(Verif(buf,rc,(int)buf[5])){
+        //Décomposer la requete reçue, c'est à dire faire transformer la requete unsigned char en TLV (byteToNumber & numberToByte)  <---------- dans une fonction
+        TLV tlv;
 
-      //Décomposer la requete reçue, c'est à dire faire transformer la requete unsigned char en TLV (byteToNumber & numberToByte)  <---------- dans une fonction
-      //TLV tlv;
-      //void fonctionQuiDécompose(buf,&tlv); <-- a l'intérieur : un switch sur le type du paquet reçu
+        decomposeRequest(buf,&tlv);
+        //On analyse maintenant la requête obtenue
+        checkRecieved(tlv, peer);
+        afficheListe(p.recent);
+      }
 
-      //checkreiceve(TLV, peer) <- peer représente le sockaddr_in6 qu'on a utilisé dans recvfrom
+      //Sinon, on ignore
 
 
   }

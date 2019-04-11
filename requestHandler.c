@@ -7,62 +7,111 @@
 
 
 
-
-int Verif(char *req,int length_TLV){
+//Vérifie si une requête est bien formée
+int Verif(unsigned char *req,int taille, int length_TLV){
 	if(req[0]==93 && req[1]==2){
 	uint64_t body_length = byteToNumber(req+2,16);//retourn le num en 64bits (donc 8 octets )
-	int taille=sizeof(req)/sizeof(req[1]);
-	if(taille-body_length-4==taille){
+	if(body_length+4==taille){
 			if(length_TLV==body_length-2)//le body_TLV longueur du TLV entier
 				return 1;
 		}
-
 		return 0;
 	}
+}
 
+void decomposeRequest(unsigned char *req, TLV *tlv){
+	tlv->type = req[4];
+	tlv->length = req[5];
 
+	switch(tlv->type){
+		case 2: {
+
+			//Si c'est un hello court
+			if(tlv->length==8){
+				//On remplit le source id seulement
+				for(int i=0;i<8;i++){
+					tlv->body.Hello.sourceid[i] = req[6+i];
+				}				
+			}
+
+			//Si c'est un hello long
+			if(tlv->length == 16){
+
+				//on remplit le sourceid & le destId en même temps;
+				for(int i=0;i<8;i++){
+					tlv->body.Hello.sourceid[i] = req[6+i];
+					tlv->body.Hello.destinationid[i] = req[14+i];
+				}
+
+			}
+
+			break;
+		}
+
+		case 3:{
+			//On remplit le TLV avec l'ip
+			for(int i=0;i<16;i++){
+				tlv->body.Neighbour.ip[i] = req[6+i];
+			}
+			//On remplit le TLV avec le port
+			tlv->body.Neighbour.port[0] = req[22];
+			tlv->body.Neighbour.port[1] = req[23];
+
+			break;
+		}
+
+		default: {
+			break;
+		}
+	}
+}
 
 
 
 //Des futures réactions lors des récéptions de TLVs
-	void checkRecieved (TLV tlv,struct sockaddr_in6 peer){
-		if( Verif(req,tlv.length) ){
-			switch(tlv.type){
+void checkRecieved (TLV tlv,struct sockaddr_in6 peer){
+
+	switch(tlv.type){
 
 
 		//Hello
-				case 2 :
-				{
-				Voisins *v;
-				if(tlv.length==8){
-					v=newVoisin(byteToNumber(tlv.body.Hello.sourceid+8,128),peer.sin6_port);
-					addVoisin(p.recent,v);
+		case 2 :
+		{
 
-				}
-				else if(tlv.length=16){
-					v=newVoisin(byteToNumber(tlv.body.Hello.sourceid+8,128),peer.sin6_port);
-					v->symetrique=1;
+			Voisin *v;
+			if(tlv.length==8){
+				if(!isVoisin(p.recent, peer.sin6_addr.s6_addr, peer.sin6_port)){
+					v=newVoisin(byteToNumber(tlv.body.Hello.sourceid,64), peer.sin6_addr.s6_addr, peer.sin6_port);
 					addVoisin(p.recent,v);
 				}
-		//Si le voisin est déjà dans la liste des voisins récents on ne fait rien
-				break;
+
+			}
+			else if(tlv.length=16){
+				if(!isVoisin(p.recent, peer.sin6_addr.s6_addr, peer.sin6_port)){
+					v=newVoisin(byteToNumber(tlv.body.Hello.sourceid,64), peer.sin6_addr.s6_addr, peer.sin6_port);
+					v->symetrique=1;
+					addVoisin(p.recent,v);	
 				}
+			}
+				//Si le voisin est déjà dans la liste des voisins récents on ne fait rien
+			break;
+		}
 
 
 
 		//Neighbor
-				case 3 :
-				{
-					uint128_t ip = byteToNumber(req+6,128);
-					uint16_t port = byteToNumber(req+22,16);
-					Voisins *voisin = newVoisin(ip,port);
-					//addVoisin(peer->potentiels,voisin);
+		case 3 :
+		{
+
+			uint16_t port = byteToNumber(tlv.body.Neighbour.port,16);
+			Voisin *voisin = newVoisin(-1,tlv.body.Neighbour.ip,port);
+			addVoisin(p.potentiel,voisin);
 
 
 
 		//Ce TLV indique que le récepteur a une relation de voisinage symétrique avec un pair à l’adresseIPet écoutant sur le port UDPPort. Les adresses IPv6 sont représentées telles quelles, les adressesIPv4 sont représentées sous formeIPv4-Mapped(dans le préfixe::FFFF:0:0/96).
-					break;
-				}
+			break;
+		}
 
 
 
@@ -70,12 +119,12 @@ int Verif(char *req,int length_TLV){
 
 
 		//data
-				case 4 :
-				{
+		case 4 :
+		{
 
 		//Traiter le Data
-					uint64_t id = byteToNumber(tlv.body.Data.senderid,64);
-					uint32_t nonce = byteToNumber(tlv.body.Data.nonce,32);
+			uint64_t id = byteToNumber(tlv.body.Data.senderid,64);
+			uint32_t nonce = byteToNumber(tlv.body.Data.nonce,32);
 		//vérifier dans la liste de données réçues la pair (id,nonce)
 
 		//Si ce n'est pas le cas, on affiche 
@@ -83,21 +132,21 @@ int Verif(char *req,int length_TLV){
 
 
 		//Si c'est le cas : 
-					TLV tlv;
-					newAck(&tlv,id,nonce);
+			TLV tlv;
+			newAck(&tlv,id,nonce);
 
 
 		//Envoyer un ack a l'envoyeur
 		//sendRequest(tlv);
-					break;
-				}
+			break;
+		}
 		//ack
-				case 5 : 
+		case 5 : 
 		//On supprime des voisins à innonder		
-				break;
+		break;
 
 		//Goaway
-				case 6 : 
+		case 6 : 
 		//Réagir en fonction du code reçu
 		//Si code == 1 : On retire l'emetteur des voisins
 		//Si code == 2 : Envoyer un hello long
@@ -105,21 +154,19 @@ int Verif(char *req,int length_TLV){
 
 		//Retirer le recepteur des voisins symmétriques/ou retirer de la liste tout court
 		//LE garder dans les potentiels voisins
-				break;
+		break;
 
 		//Warning
-				case 7 : 
+		case 7 : 
 		//Montrer le message warning
-				printf("Un message d'erreur : \n");
-				break;
+		printf("Un message d'erreur : \n");
+		break;
 
 		//0, PadN ou autres
-				default : 
-				printf("Un packet à ignorer a été reçu\n");
+		default : 
+		printf("Un packet à ignorer a été reçu\n");
 		//a Ignorer
-				break;
-			}
-		}
+		break;
 	}
 }
 

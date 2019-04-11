@@ -61,7 +61,7 @@ typedef struct Datagramme{
 }Datagramme;
 
 
-typedef struct Voisins{
+typedef struct Voisin{
 	unsigned char ip[16];
 	uint64_t id;
 	uint16_t port;
@@ -69,16 +69,21 @@ typedef struct Voisins{
 
 	time_t shorthello;
 	time_t longhello;
-	struct Voisins *next;
-	struct Voisins *last;
+	struct Voisin *next;
 
-}Voisins;
 
+}Voisin;
+
+
+typedef struct Liste_Voisin{
+	Voisin *first;
+	Voisin *last;
+}Liste_Voisin;
 
 typedef struct Peer{
-	uint128_t id;
-	struct Voisins *potentiel;
-	struct Voisins *recent;
+	uint64_t id;
+	Liste_Voisin *potentiel;
+	Liste_Voisin *recent;
 }Peer;
 
 
@@ -86,10 +91,14 @@ typedef struct Peer{
 extern Peer p;
 
 
-Voisins *newVoisin(uint8_t id, uint8_t port);
+Voisin *newVoisin(uint64_t id,unsigned char *ip, uint16_t port);
 
-void addVoisin(Voisins *list, Voisins *newVoisin);
+void addVoisin(Liste_Voisin *list, Voisin *newVoisin);
 
 void initPeer(Peer *p);
+
+int isVoisin(Liste_Voisin *list, unsigned char *ip, uint64_t port);
+
+void afficheListe(Liste_Voisin *list);
 
 #endif

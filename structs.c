@@ -1,24 +1,62 @@
 #include "structs.h"
+#include "requestHandler.h"
 
-
-Voisins *newVoisin(uint8_t id, uint8_t port){
-	Voisins *v=malloc(sizeof(Voisins));
+Voisin *newVoisin(uint64_t id,unsigned char *ip, uint16_t port){
+	
+	Voisin *v=(Voisin*)malloc(sizeof(Voisin));
 	v->id=id;
+	memcpy(v->ip,ip,16);
 	v->port=port;
 	v->symetrique=0;
 	v->next=NULL;
-return v;
+	return v;
 }
 
-void addVoisin(Voisins *list, Voisins *newVoisin){
-	list->last->next = newVoisin;
-	list->last = newVoisin;
+void addVoisin(Liste_Voisin *list, Voisin *newVoisin){
+		if(list->first==NULL){
+			list->first = newVoisin;
+			list->last = newVoisin;	
+		}
+		else{
+			list->last->next = newVoisin;
+			list->last = newVoisin;
+		}
+
 }
 	
 void initPeer(Peer *p){
 	
-	p->id=454554;
-	p->potentiel=NULL; //ca prend une liste de voisin
-	p->recent=NULL;
+	p->id=454554; // c censé être random
+	p->potentiel=(Liste_Voisin*)malloc(sizeof(Liste_Voisin)); //ca prend une liste de voisin
+	p->potentiel->first = NULL;
+	p->potentiel->last = NULL;
+	p->recent=(Liste_Voisin*) malloc(sizeof(Liste_Voisin));
+	p->recent->first = NULL;
+	p->recent->last = NULL;
 }
 
+
+int isVoisin(Liste_Voisin *list, unsigned char *ip, uint64_t port){
+	uint128_t ipNum = byteToNumber(ip,128);
+
+	Voisin *current = list->first;
+
+	while(current!=NULL){
+		if(ipNum == byteToNumber(current->ip,128)){
+			return 1;
+		}
+		current = current->next;
+	}
+	return 0;
+}
+
+
+void afficheListe(Liste_Voisin *list){
+	Voisin *current = list->first;
+
+	while(current!=NULL){
+		printf("\n(ID,PORT) : (%lu,%d) \n",current->id,current->port);
+		current = current->next;
+	}
+
+}

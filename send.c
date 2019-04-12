@@ -169,7 +169,6 @@ int sntp_req(int s,struct sockaddr_in6 *peer, TLV tlv){
 
 
 void Envoi_LOng(TLV tlv,int s){
-	Peer *p;
 	tlv.length=16;
 	
 		while(p->recent->first!=NULL){
@@ -180,7 +179,6 @@ void Envoi_LOng(TLV tlv,int s){
 }
 
 void Envoi_Court(TLV tlv,int s){
-	Peer *p;
 	tlv.length=8;
 	
 	while(p->potentiel->first!=NULL){
@@ -200,7 +198,6 @@ int recv_req(int s,struct sockaddr_in6 *peer, TLV tlv){
 }
 
 void Supprime(Peer *peer){
-	Peer *p;
 if(p!=NULL){
 	while(p->potentiel->first->id!=peer->id){
 		p=p->potentiel->first->next;
@@ -221,7 +218,6 @@ return p;
 	
 void ChekHelloCourt(TLV tlv,struct sockaddr_in6 *peer,int s){
 	Voisin *v;
-	Peer *p;
 	tlv.length=8;
 		if(recv_req(s,&peer,tlv)){
 			if(isVoisin(p->potentiel,peer->sin6_addr.s6_addr, peer->sin6_port)){
@@ -234,7 +230,6 @@ void ChekHelloCourt(TLV tlv,struct sockaddr_in6 *peer,int s){
 	
 void ChekHelloLOng(TLV tlv,struct sockaddr_in6 *peer,int s){
 	Voisin *v;
-	Peer *p;
 	tlv.length=16;
 	if(recv_req(s,&peer,tlv)){
 		if(isVoisin(p->potentiel,peer->sin6_addr.s6_addr, peer->sin6_port)){

@@ -6,6 +6,7 @@ Voisin *newVoisin(uint64_t id,unsigned char *ip, uint16_t port){
 	Voisin *v=(Voisin*)malloc(sizeof(Voisin));
 	v->id=id;
 	memcpy(v->ip,ip,16);
+
 	v->port=port;
 	v->symetrique=0;
 	v->next=NULL;
@@ -53,9 +54,10 @@ int isVoisin(Liste_Voisin *list, unsigned char *ip, uint64_t port){
 
 void afficheListe(Liste_Voisin *list){
 	Voisin *current = list->first;
-
+	char str[30];
 	while(current!=NULL){
-		printf("\n(ID,PORT) : (%lu,%d) \n",current->id,current->port);
+		inet_ntop(AF_INET6, current->ip, str, INET6_ADDRSTRLEN);
+		printf("\n(IP : PORT) : (%s,%d) \n",str,current->port);
 		current = current->next;
 	}
 

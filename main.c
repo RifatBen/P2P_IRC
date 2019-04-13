@@ -76,26 +76,27 @@ initPeer(&p);
     printf("\nMessage reçu\n");
     for (int i = 0 ; i < rc ; i++) { printf("%.2d ", buf[i]); }
       //On vérifie si la requête est bien formée
-      printf("HAWLIK  : %.2d\n",buf[1000]);
-      if(Verif(buf,rc,(int)buf[5])){
+      if(Verif(buf,rc)){
+      	printf("Paquet bien formé!\n");
         //Décomposer la requete reçue, c'est à dire faire transformer la requete unsigned char en TLV (byteToNumber & numberToByte) 
         TLV tlv;
-		// for(int i=4;i<rc;i++){
-		// decomposeRequest(buf+i,&tlv);
-		// checkRecieved(tlv,peer);
-		// i+=buf[i+1];
-		// }
+		for(int i=4;i<rc;i++){
+			decomposeRequest(buf+i,&tlv);
+			checkRecieved(tlv,peer);
+			i+=buf[i+1]+1;
+		}
 		// 
 		// 
-
+/*
         //on decompose la requete et on analyse chaque tlv a l'interieur : 
         decomposeRequest(buf,&tlv);
         //On analyse maintenant la requête obtenue
         
 
         checkRecieved(tlv, peer);
-
+*/
         afficheListe(p.recent);
+        afficheListe(p.potentiel);
       }
 
       //Sinon, on ignore

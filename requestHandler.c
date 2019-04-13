@@ -8,7 +8,7 @@
 
 
 //Vérifie si une requête est bien formée
-int Verif(unsigned char *req,int taille, int length_TLV){
+int Verif(unsigned char *req,int taille){
 	if(req[0]==93 && req[1]==2){
 		uint64_t body_length = byteToNumber(req+2,16);//retourn le num en 64bits (donc 8 octets )
 
@@ -16,7 +16,7 @@ int Verif(unsigned char *req,int taille, int length_TLV){
 			int cpt=0;
 			//Sinon : 
 			for(int i=4;i<taille;i++){
-				if(req[i]!=0 && req[i+1] != 0){
+				if(req[i]!=0){
 					cpt+=req[i+1]+2;
 					i+=req[i+1]+1;
 				}
@@ -34,8 +34,8 @@ int Verif(unsigned char *req,int taille, int length_TLV){
 }
 
 void decomposeRequest(unsigned char *req, TLV *tlv){
-	tlv->type = req[4];
-	tlv->length = req[5];
+	tlv->type = req[0];
+	tlv->length = req[1];
 
 	switch(tlv->type){
 		case 2: {
@@ -44,7 +44,7 @@ void decomposeRequest(unsigned char *req, TLV *tlv){
 			if(tlv->length==8){
 				//On remplit le source id seulement
 				for(int i=0;i<8;i++){
-					tlv->body.Hello.sourceid[i] = req[6+i];
+					tlv->body.Hello.sourceid[i] = req[2+i];
 				}				
 			}
 
@@ -53,8 +53,8 @@ void decomposeRequest(unsigned char *req, TLV *tlv){
 
 				//on remplit le sourceid & le destId en même temps;
 				for(int i=0;i<8;i++){
-					tlv->body.Hello.sourceid[i] = req[6+i];
-					tlv->body.Hello.destinationid[i] = req[14+i];
+					tlv->body.Hello.sourceid[i] = req[2+i];
+					tlv->body.Hello.destinationid[i] = req[10+i];
 				}
 
 			}
@@ -65,11 +65,11 @@ void decomposeRequest(unsigned char *req, TLV *tlv){
 		case 3:{
 			//On remplit le TLV avec l'ip
 			for(int i=0;i<16;i++){
-				tlv->body.Neighbour.ip[i] = req[6+i];
+				tlv->body.Neighbour.ip[i] = req[2+i];
 			}
 			//On remplit le TLV avec le port
-			tlv->body.Neighbour.port[0] = req[22];
-			tlv->body.Neighbour.port[1] = req[23];
+			tlv->body.Neighbour.port[0] = req[18];
+			tlv->body.Neighbour.port[1] = req[19];
 
 			break;
 		}
@@ -116,10 +116,12 @@ void checkRecieved (TLV tlv,struct sockaddr_in6 peer){
 		//Neighbor
 		case 3 :
 		{
-
+			Voisin *voisin;
 			uint16_t port = byteToNumber(tlv.body.Neighbour.port,16);
-			Voisin *voisin = newVoisin(-1,tlv.body.Neighbour.ip,port);
-			addVoisin(p.potentiel,voisin);
+			if(!isVoisin(p.potentiel, tlv.body.Neighbour.ip , peer.sin6_port)){
+				voisin = newVoisin(0,tlv.body.Neighbour.ip,port);
+				addVoisin(p.potentiel,voisin);	
+			}
 
 
 
@@ -283,8 +285,8 @@ void numberToByte(uint64_t number, unsigned char *req,  int size){//Le mode big 
 
 
 //Convertie un nombre dans un unsigned char (format big endian) en un nombre (uint64)
-uint64_t byteToNumber(unsigned char *req, int size){//
-	uint64_t num = 0;
+uint128_t byteToNumber(unsigned char *req, int size){//
+	uint128_t num = 0;
 	int j=0;
 	for(int i=size-8;i>=0;i-=8){
 		num += ((uint64_t)req[j] << i);

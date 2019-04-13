@@ -49,17 +49,6 @@ typedef struct TLV {
 		}body;
 }TLV;
 
-typedef struct Header {
-	unsigned char magic;
-	unsigned char version;
-	unsigned char bodylen[2];
-}Header;
-
-typedef struct Datagramme{
-	struct header *head;
-	struct TLV *body;
-}Datagramme;
-
 
 typedef struct Voisin{
 	unsigned char ip[16];

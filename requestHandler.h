@@ -10,7 +10,7 @@
 
 
 void numberToByte(uint64_t number, unsigned char *req, int size);
-uint64_t byteToNumber(unsigned char *req, int size);
+uint128_t byteToNumber(unsigned char *req, int size);
 
 void newHelloCourt(TLV *message, uint64_t id);
 
@@ -29,7 +29,7 @@ void newAck(TLV *message, uint64_t senderid, uint64_t nonce);
 
 
 
-int Verif(unsigned char *req,int taille, int tlvLength);
+int Verif(unsigned char *req,int taille);
 void decomposeRequest(unsigned char *req, TLV *tlv);
 void createRequest(unsigned char *req, TLV tlv);
 void checkRecieved (TLV tlv,struct sockaddr_in6 peer);

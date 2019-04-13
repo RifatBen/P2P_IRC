@@ -9,7 +9,8 @@
 #include <netdb.h>
 #include <unistd.h>
 
-
+#define BUF_SIZE 1024
+#define REQ_SIZE 14
 
 
 
@@ -92,7 +93,7 @@ typedef struct Peer{
 	Liste_Voisin *potentiel;
 	Liste_Voisin *recent;
 }Peer;
-/*
+
 void addVoisin(Liste_Voisin *list, Voisin *newVoisin){
 		if(list->first==NULL){
 			list->first = newVoisin;
@@ -104,7 +105,8 @@ void addVoisin(Liste_Voisin *list, Voisin *newVoisin){
 		}
 
 }
-*/
+
+
 //Convertie un nombre dans un unsigned char (format big endian) en un nombre (uint64)
 uint64_t byteToNumber(unsigned char *req, int size){//
 	uint64_t num = 0;
@@ -120,7 +122,7 @@ uint64_t byteToNumber(unsigned char *req, int size){//
 
 
 
-
+//
 int isVoisin(Liste_Voisin *list, unsigned char *ip, uint64_t port){
 	uint128_t ipNum = byteToNumber(ip,128);
 
@@ -148,80 +150,93 @@ Voisin *newVoisin(uint64_t id,unsigned char *ip, uint16_t port){
 	return v;
 }
 
-void addVoisin(Liste_Voisin *list, Voisin *newVoisin){
-		if(list->first==NULL){
-			list->first = newVoisin;
-			list->last = newVoisin;	
-		}
-		else{
-			list->last->next = newVoisin;
-			list->last = newVoisin;
-		}
 
-}
-	
 
 int sntp_req(int s,struct sockaddr_in6 *peer, TLV tlv){
-	int rc=sendto(s,&tlv,sizeof(tlv),0,(struct sockaddr*)peer,sizeof(struct sockaddr_in)) ;
-	if(rc<0)
-		printf("%s","Erreur de l'envoie");
-}
-
-
-void Envoi_LOng(TLV tlv,int s){
-	tlv.length=16;
-	
-		while(p->recent->first!=NULL){
-			sntp_req(s,&p,tlv);
-			p=p->recent->first->next;
-		}
-	
-}
-
-void Envoi_Court(TLV tlv,int s){
-	tlv.length=8;
-	
-	while(p->potentiel->first!=NULL){
-			sntp_req(s,&p,tlv);
-			p=p->potentiel->first->next;
-		}
-	
-}
-
-
-int recv_req(int s,struct sockaddr_in6 *peer, TLV tlv){
-	int rc=recvfrom(s,&tlv,sizeof(tlv),0,(struct sockaddr*)&peer,sizeof(struct sockaddr_in)) ;
-	if(rc<0){
-		perror("recvfrom");
-		exit(1);
+	unsigned char req[REQ_SIZE] = {0};
+	createRequest(req,tlv);
+	int lenreq = sizeof(req)/sizeof(unsigned char);
+	int rc=sendto(s,req,lenreq,0,(struct sockaddr*)peer,sizeof(struct sockaddr_in)) ;
+	if(rc < 0) {
+      		fprintf(stderr,"Error recev\n");
+      		exit(1);
+    	}else{
+		return 1;
 	}
 }
 
-void Supprime(Peer *peer){
-if(p!=NULL){
-	while(p->potentiel->first->id!=peer->id){
-		p=p->potentiel->first->next;
+
+void Envoi_LOng(int s,Liste_Voisin *l){
+	TLV tlv;
+  	newHello_Long(&tlv,1024);
+	Voisin *v;
+	if(l->first!=NULL){
+	v=l->first;
+	sntp_req(s,&v,tlv);
 	}
-	if(p->potentiel->first->next!=NULL){
-		p->potentiel->first->prev->next=p->potentiel->first->next;
-		p->potentiel->first->next->prev=p->potentiel->first->prev;
+	while(v->next!=NULL){
+	sntp_req(s,&v,tlv);
+	v=v->next;
+	}
+	
+}
+
+void Envoi_Court(int s,Liste_Voisin *l){
+	TLV tlv;
+	newHello_Court(&tlv,1024);
+	Voisin *v;
+	if(l->first!=NULL){
+	v=l->first;
+	sntp_req(s,&v,tlv);
+	}
+	while(v->next!=NULL){
+	sntp_req(s,&v,tlv);
+	v=v->next;
+	}
+	
+}
+
+
+
+int recv_req(int s,struct sockaddr_in6 *peer){
+	unsigned char buf [BUF_SIZE] = {0};
+	 int rc = recvfrom(s, buf, BUF_SIZE,0,&peer, sizeof(struct sockaddr_in6));
+    	if(rc < 0) {
+      		fprintf(stderr,"Error recev\n");
+      		exit(1);
+    	}else{
+	return 1;
+	}
+}
+
+
+
+void Supprime(Liste_Voisin *l,uint16_t p){
+	Voisin *v;
+	while(l->first->port!=p && l->first->next!=NULL){ 
+		v=l->first->next;
+	}
+	if(v->next!=NULL){
+		v->prev->next=v->next;
+		v->next->prev=v->prev;
 	}else{
-		p->potentiel->last=p->potentiel->first->prev;
-		p->potentiel->first->prev->next=NULL;
+		v->prev=l->last;
 	}
-}
-return p;
+return l;
 }
 		
 	
 	
-	
+
+
+
+/*	
 void ChekHelloCourt(TLV tlv,struct sockaddr_in6 *peer,int s){
 	Voisin *v;
 	tlv.length=8;
 		if(recv_req(s,&peer,tlv)){
 			if(isVoisin(p->potentiel,peer->sin6_addr.s6_addr, peer->sin6_port)){
-			Supprime(&p);
+			Supprime(&p,p->port);
 			v=newVoisin(byteToNumber(tlv.body.Hello.sourceid,64), peer->sin6_addr.s6_addr, peer->sin6_port);
 					addVoisin(p->recent,v);
 			}
@@ -233,11 +248,11 @@ void ChekHelloLOng(TLV tlv,struct sockaddr_in6 *peer,int s){
 	tlv.length=16;
 	if(recv_req(s,&peer,tlv)){
 		if(isVoisin(p->potentiel,peer->sin6_addr.s6_addr, peer->sin6_port)){
-			Supprime(&p);
+			Supprime(&p,p->port);
 			v=newVoisin(byteToNumber(tlv.body.Hello.sourceid,64), peer->sin6_addr.s6_addr, peer->sin6_port);
 					addVoisin(p->recent,v);
 		}
 	}
 }
-
+*/
 

@@ -10,12 +10,26 @@
 //Vérifie si une requête est bien formée
 int Verif(unsigned char *req,int taille, int length_TLV){
 	if(req[0]==93 && req[1]==2){
-	uint64_t body_length = byteToNumber(req+2,16);//retourn le num en 64bits (donc 8 octets )
-	if(body_length+4==taille){
-			if(length_TLV==body_length-2)//le body_TLV longueur du TLV entier
+		uint64_t body_length = byteToNumber(req+2,16);//retourn le num en 64bits (donc 8 octets )
+
+		if(body_length+4==taille){
+			int cpt=0;
+			//Sinon : 
+			for(int i=4;i<taille;i++){
+				if(req[i]!=0 && req[i+1] != 0){
+					cpt+=req[i+1]+2;
+					i+=req[i+1]+1;
+				}
+				else if(req[i]==0)
+					cpt++;
+				else
+					break;
+			}
+
+			if(cpt==body_length)
 				return 1;
 		}
-		return 0;
+	return 0;
 	}
 }
 
@@ -233,10 +247,10 @@ void newHelloLong(TLV *message, uint64_t sourceid, uint64_t destid){
 
 }	
 
-void newNeighbour(TLV *message, uint128_t ip, uint16_t port){
+void newNeighbour(TLV *message, unsigned char *ip, uint16_t port){
 	message->type = 3;
 	message->length = 18;
-	numberToByte(ip,message->body.Neighbour.ip,128);
+	//ON MET L'IP DANS message->body.Neighbour.ip
 	numberToByte(port,message->body.Neighbour.port,16);
 }
 

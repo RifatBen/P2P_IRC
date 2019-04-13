@@ -20,7 +20,7 @@ void newPadN(TLV *message);
 
 void newHelloLong(TLV *message, uint64_t sourceid, uint64_t destid);
 
-void newNeighbour(TLV *message, uint128_t ip, uint16_t port);
+void newNeighbour(TLV *message, unsigned char  *ip, uint16_t port);
 
 void newData(TLV *message, uint64_t senderid, uint32_t nonce, unsigned char type,  char *data );
 

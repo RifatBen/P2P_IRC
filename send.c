@@ -168,13 +168,10 @@ int sntp_req(int s,struct sockaddr_in6 *peer, TLV tlv){
 
 void Envoi_LOng(int s,Liste_Voisin *l){
 	TLV tlv;
-  	newHello_Long(&tlv,1024);
 	Voisin *v;
-	if(l->first!=NULL){
 	v=l->first;
-	sntp_req(s,&v,tlv);
-	}
-	while(v->next!=NULL){
+	while(v!=NULL){//envoi de Hello long different à chaque voisin
+	newHello_Long(&tlv,1024);
 	sntp_req(s,&v,tlv);
 	v=v->next;
 	}
@@ -185,11 +182,8 @@ void Envoi_Court(int s,Liste_Voisin *l){
 	TLV tlv;
 	newHello_Court(&tlv,1024);
 	Voisin *v;
-	if(l->first!=NULL){
 	v=l->first;
-	sntp_req(s,&v,tlv);
-	}
-	while(v->next!=NULL){
+	while(v!=NULL){//ENvoi d'un meme Hello Court à chaque voisin
 	sntp_req(s,&v,tlv);
 	v=v->next;
 	}
@@ -198,29 +192,34 @@ void Envoi_Court(int s,Liste_Voisin *l){
 
 
 
-int recv_req(int s,struct sockaddr_in6 *peer){
+void recv_req(int s,struct sockaddr_in6 *peer){
 	unsigned char buf [BUF_SIZE] = {0};
 	 int rc = recvfrom(s, buf, BUF_SIZE,0,&peer, sizeof(struct sockaddr_in6));
     	if(rc < 0) {
       		fprintf(stderr,"Error recev\n");
       		exit(1);
     	}else{
-	return 1;
+	 printf("\nMessage reçu\n");
+   	 for (int i = 0 ; i < rc ; i++) { 
+		printf("%.2d ", buf[i]);
+	}
 	}
 }
 
 
 
-void Supprime(Liste_Voisin *l,uint16_t p){
+void Supprime(Liste_Voisin *l,unsigned char* ip2){
 	Voisin *v;
-	while(l->first->port!=p && l->first->next!=NULL){ 
-		v=l->first->next;
+	v=l->first;
+	while(v->ip!=ip2 && v->next!=NULL){ 
+		v=v->next;
 	}
 	if(v->next!=NULL){
 		v->prev->next=v->next;
 		v->next->prev=v->prev;
 	}else{
 		v->prev=l->last;
+		l->last=v->prev;
 	}
 return l;
 }

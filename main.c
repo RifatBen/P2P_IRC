@@ -5,7 +5,7 @@
 #include "requestHandler.h"
 
 #define BUF_SIZE 1024
-#define REQ_SIZE 14
+#define REQ_SIZE 1024
 
 
 void fillSocket(struct sockaddr_in6 * peer);
@@ -52,11 +52,23 @@ initPeer(&p);
   fillSocket(&peer);
 
   //On crée notre TLV Hello court (Ou nimporte quel autre TLV grace aux fonctions dont on dispose)
-  TLV tlv;
-  newHelloCourt(&tlv,p.id);
+  TLV tlv, tlv2;
+  uint128_t aze = 12334436889105333089;
+  newHelloLong(&tlv,p.id,aze);
+ 	// newHelloCourt(&tlv,p.id);
+  TLV tlvtab[2] = {0};
+  tlvtab[0]=tlv;
 
-  //On crée la requête avec notre tlv
-  createRequest(req,tlv);
+  uint16_t port = 1111;
+  unsigned char ip[sizeof(struct sockaddr_in6)];
+  char str[INET6_ADDRSTRLEN] = "2a01:e35:8a6e:d2a0:2954:4706:a157:4840";
+  inet_pton(AF_INET6, str, ip);
+
+  newNeighbour(&tlv2,ip,port);
+  tlvtab[1] = tlv2;
+  //On crée la requête avec nos tlv
+  
+  createRequest(req,tlvtab,2);
   //TLV
   int lenreq = sizeof(req)/sizeof(unsigned char);
 
@@ -79,22 +91,11 @@ initPeer(&p);
       if(Verif(buf,rc)){
       	printf("Paquet bien formé!\n");
         //Décomposer la requete reçue, c'est à dire faire transformer la requete unsigned char en TLV (byteToNumber & numberToByte) 
-        TLV tlv;
 		for(int i=4;i<rc;i++){
 			decomposeRequest(buf+i,&tlv);
 			checkRecieved(tlv,peer);
 			i+=buf[i+1]+1;
 		}
-		// 
-		// 
-/*
-        //on decompose la requete et on analyse chaque tlv a l'interieur : 
-        decomposeRequest(buf,&tlv);
-        //On analyse maintenant la requête obtenue
-        
-
-        checkRecieved(tlv, peer);
-*/
         afficheListe(p.recent);
         afficheListe(p.potentiel);
       }

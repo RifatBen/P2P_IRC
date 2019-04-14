@@ -57,7 +57,7 @@ void afficheListe(Liste_Voisin *list){
 	char str[30];
 	while(current!=NULL){
 		inet_ntop(AF_INET6, current->ip, str, INET6_ADDRSTRLEN);
-		printf("\n(IP : PORT) : (%s,%d) \n",str,current->port);
+		printf("\n(IP : ID :  PORT) : (%s,%llu,%d) \n",str,current->id, current->port);
 		current = current->next;
 	}
 

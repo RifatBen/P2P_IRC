@@ -113,7 +113,7 @@ void checkRecieved (TLV tlv,struct sockaddr_in6 peer){
 
 
 
-		//Neighbor
+		//Neighbour
 		case 3 :
 		{
 			Voisin *voisin;
@@ -193,20 +193,74 @@ void checkRecieved (TLV tlv,struct sockaddr_in6 peer){
 
 
 
-void createRequest(unsigned char *req, TLV tlv){// Datagramme-->Magic,Version,Body(type,longeur,valeur d'un corp de TLV)
+void createRequest(unsigned char *req, TLV *tlv, int nbrTLV){// Datagramme-->Magic,Version,Body(type,longeur,valeur d'un corp de TLV)
+	
 	    //Header
   req[0] = 93; //Magic
   req[1] = 2; //Version
-  numberToByte(tlv.length + 2, req+2, 16);
-  req[4] = tlv.type;
-  req[5] = tlv.length;//(longueur du corp sans type et longueur)
-  for(int i = 0;i<tlv.length;i++){
-  	req[i+6] = tlv.body.Hello.sourceid[i];
+
+  int alltlvlen= 0;
+
+  for(int i=0;i<nbrTLV;i++){
+  	if(tlv[i].type==0)
+  		alltlvlen += 1;
+  	else
+  		alltlvlen +=  tlv[i].length +2;
+  }
+  
+  numberToByte(alltlvlen, req+2, 16);
+  int j=0;
+  for(int i=4; i<alltlvlen+4;){
+  	if(tlv[j].type!=0){
+	  	req[i++]=tlv[j].type;
+	  	req[i++]=tlv[j].length;
+	  	
+	  	switch(tlv[j].type){
+	  		case 1:{
+	  			for(int k=0;k<tlv[j].length;k++)
+	  				req[i++]=tlv[j].body.PadN.mbz[k];
+				
+
+	  			break;
+	  		}
+
+	  		case 2:{
+	  			if(tlv[j].length==8){
+	  				for(int k=0;k<8;k++)
+	  					req[i++]=tlv[j].body.Hello.sourceid[k];
+	  			}
+	  			if(tlv[j].length==16){
+	  				for(int k=0;k<8;k++)
+	  					req[i++]=tlv[j].body.Hello.sourceid[k];
+	  				for(int k=0;k<8;k++)
+	  					req[i++]=tlv[j].body.Hello.destinationid[k];
+	  			}
+	  		break;
+	  		}
+
+	  		case 3:{
+	  			for(int k=0;k<tlv[j].length-2;k++)
+	  				req[i++]=tlv[j].body.Neighbour.ip[k];
+	  			req[i++]=tlv[j].body.Neighbour.port[0];
+	  			req[i++]=tlv[j].body.Neighbour.port[1];
+	  			break;
+	  		}
+
+  		}	
+  	}
+
+  	//Si c'est un TLV Pad1
+  	else
+  		req[i++]=tlv[j].type;
+
+  		//On passe au TLV suivant
+  		j++;
   }
 
 
+
   printf("Requête : ");
-  for (int i = 0 ; i < tlv.length + 6 ; i++) { printf("%.2d ", req[i]); }
+  for (int i = 0 ; i <  alltlvlen + 4 ; i++) { printf("%.2d ", req[i]); }
 }
 
 
@@ -253,6 +307,8 @@ void newNeighbour(TLV *message, unsigned char *ip, uint16_t port){
 	message->type = 3;
 	message->length = 18;
 	//ON MET L'IP DANS message->body.Neighbour.ip
+	for(int i=0;i<16;i++)
+		message->body.Neighbour.ip[i]=ip[i];
 	numberToByte(port,message->body.Neighbour.port,16);
 }
 

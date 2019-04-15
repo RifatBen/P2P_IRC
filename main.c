@@ -30,6 +30,8 @@ int main(){
 		exit(1);
 	}
 
+	// fcntl(s, F_SETFL, fcntl(s, F_GETFL) | O_NONBLOCK);
+
 	struct sockaddr_in6 sin6 = {0}; 
 
   // Socket de réception de l'adresse du pair
@@ -66,8 +68,7 @@ int main(){
 	newNeighbour(&tlv2,ip,port);
 	tlvtab[1] = tlv2;
   //On crée la requête avec nos tlv
-
-  // createRequest(req,tlvtab,2);
+	// createRequest(req,tlvtab,2);
    // Et on l'envoie à un pair
 	while(1) {
 
@@ -115,7 +116,7 @@ int main(){
 
 
 	void initSocket(int s, struct sockaddr_in6 *sin6){
-
+	
   // Définition de la socket
   sin6->sin6_family = AF_INET6; // Adresse IPV6
   sin6->sin6_port = htons(1212); // Port local
@@ -129,16 +130,14 @@ int main(){
 }
 
 void fillSocket(struct sockaddr_in6 * peer) {
-	int rc = 0;
+	int rc=0;
 	struct addrinfo hints = {0};
 	struct addrinfo *r;
 	hints.ai_family = AF_INET6;
 	hints.ai_socktype = SOCK_DGRAM;
 	hints.ai_flags = (AI_V4MAPPED | AI_ALL);
-  // Remplace gethostbyname _
-	rc = getaddrinfo("jch.irif.fr", "1212", &hints, &r);
-  // Ici tu peux faire une itération (cf man)
-	struct addrinfo *p = r;
+  	rc = getaddrinfo("jch.irif.fr", "1212", &hints, &r);
+  	struct addrinfo *p = r;
 	if (rc < 0 || p == NULL) {
 		fprintf(stderr, "Bug socket\n");
 		freeaddrinfo(r);

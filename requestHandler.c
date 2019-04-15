@@ -323,7 +323,7 @@ void Envoi_Court(int s,Liste_Voisin *l){
 		peer.sin6_family = AF_INET6;
 		peer.sin6_port = v->port;
 		memcpy(peer.sin6_addr.s6_addr, v->ip,16);
-		sntp_req(s,peer,&tlv);
+		sendRequest(s,peer,&tlv);
 		v=v->next;
 	}
 	

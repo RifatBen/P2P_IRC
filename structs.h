@@ -38,7 +38,7 @@ typedef struct TLV {
 			}Ack;
 
 			struct{
-				short code;
+				int code;
 				char message[4077];
 			}GoAway;
 
@@ -59,6 +59,7 @@ typedef struct Voisin{
 	time_t shorthello;
 	time_t longhello;
 	struct Voisin *next;
+	struct Voisin *prev;
 
 
 }Voisin;
@@ -86,7 +87,9 @@ void addVoisin(Liste_Voisin *list, Voisin *newVoisin);
 
 void initPeer(Peer *p);
 
-int isVoisin(Liste_Voisin *list, unsigned char *ip, uint64_t port);
+Voisin *isVoisin(Liste_Voisin *list, unsigned char *ip, uint64_t port);
+
+void supprimeVoisin(Liste_Voisin *l,unsigned char* ip2);
 
 void afficheListe(Liste_Voisin *list);
 

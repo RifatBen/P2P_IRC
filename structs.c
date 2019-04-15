@@ -10,6 +10,7 @@ Voisin *newVoisin(uint64_t id,unsigned char *ip, uint16_t port){
 	v->port=port;
 	v->symetrique=0;
 	v->next=NULL;
+	v->prev=NULL;
 	return v;
 }
 
@@ -20,10 +21,30 @@ void addVoisin(Liste_Voisin *list, Voisin *newVoisin){
 		}
 		else{
 			list->last->next = newVoisin;
+			newVoisin->prev = list->last;
 			list->last = newVoisin;
 		}
 
 }
+
+
+
+void supprimeVoisin(Liste_Voisin *l,unsigned char* ip2){
+	Voisin *v;
+	v=l->first;
+	while(v->ip!=ip2 && v->next!=NULL){ 
+		v=v->next;
+	}
+	if(v->next!=NULL){
+		v->prev->next=v->next;
+		v->next->prev=v->prev;
+	}else{
+		v->prev=l->last;
+		l->last=v->prev;
+	}
+}
+		
+
 	
 void initPeer(Peer *p){
 	
@@ -37,18 +58,18 @@ void initPeer(Peer *p){
 }
 
 
-int isVoisin(Liste_Voisin *list, unsigned char *ip, uint64_t port){
+Voisin *isVoisin(Liste_Voisin *list, unsigned char *ip, uint64_t port){
 	uint128_t ipNum = byteToNumber(ip,128);
 
 	Voisin *current = list->first;
 
 	while(current!=NULL){
 		if(ipNum == byteToNumber(current->ip,128)){
-			return 1;
+			return current;
 		}
 		current = current->next;
 	}
-	return 0;
+	return NULL;
 }
 
 

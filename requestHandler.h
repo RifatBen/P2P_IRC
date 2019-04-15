@@ -31,6 +31,8 @@ void newAck(TLV *message, uint64_t senderid, uint64_t nonce);
 
 int Verif(unsigned char *req,int taille);
 void decomposeRequest(unsigned char *req, TLV *tlv);
-void createRequest(unsigned char *req, TLV *tlv, int nbrTLV);
-void checkRecieved (TLV tlv,struct sockaddr_in6 peer);
+int createRequest(unsigned char *req, TLV *tlv, int nbrTLV);
+int sendRequest(int s,struct sockaddr_in6 peer, TLV *tlvs);
+void Envoi_Long(int s,Liste_Voisin *l);
+void checkRecieved (int s, TLV tlv ,struct sockaddr_in6 peer);
 #endif

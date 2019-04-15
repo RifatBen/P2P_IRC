@@ -74,6 +74,17 @@ void decomposeRequest(unsigned char *req, TLV *tlv){
 			break;
 		}
 
+		case 6:{
+			tlv->length = req[1];
+			tlv->body.GoAway.code = req[2];
+			strcpy(tlv->body.GoAway.message,(char*)req+3);
+		}
+
+		case 7:{
+			tlv->length = req[1];
+			strcpy(tlv->body.Warning.message,(char*)req+3);
+		}
+
 		default: {
 			break;
 		}
@@ -83,7 +94,7 @@ void decomposeRequest(unsigned char *req, TLV *tlv){
 
 
 //Des futures réactions lors des récéptions de TLVs
-void checkRecieved (TLV tlv,struct sockaddr_in6 peer){
+void checkRecieved (int s,TLV tlv,struct sockaddr_in6 peer){
 
 	switch(tlv.type){
 
@@ -92,16 +103,16 @@ void checkRecieved (TLV tlv,struct sockaddr_in6 peer){
 		case 2 :
 		{
 
-			Voisin *v;
+			Voisin *v=isVoisin(p.recent, peer.sin6_addr.s6_addr, peer.sin6_port);
 			if(tlv.length==8){
-				if(!isVoisin(p.recent, peer.sin6_addr.s6_addr, peer.sin6_port)){
+				if(v==NULL){
 					v=newVoisin(byteToNumber(tlv.body.Hello.sourceid,64), peer.sin6_addr.s6_addr, peer.sin6_port);
 					addVoisin(p.recent,v);
 				}
 
 			}
 			else if(tlv.length=16){
-				if(!isVoisin(p.recent, peer.sin6_addr.s6_addr, peer.sin6_port)){
+				if(v==NULL){
 					v=newVoisin(byteToNumber(tlv.body.Hello.sourceid,64), peer.sin6_addr.s6_addr, peer.sin6_port);
 					v->symetrique=1;
 					addVoisin(p.recent,v);	
@@ -116,9 +127,9 @@ void checkRecieved (TLV tlv,struct sockaddr_in6 peer){
 		//Neighbour
 		case 3 :
 		{
-			Voisin *voisin;
+			Voisin *voisin=isVoisin(p.recent, peer.sin6_addr.s6_addr, peer.sin6_port);
 			uint16_t port = byteToNumber(tlv.body.Neighbour.port,16);
-			if(!isVoisin(p.potentiel, tlv.body.Neighbour.ip , peer.sin6_port)){
+			if(voisin==NULL){
 				voisin = newVoisin(0,tlv.body.Neighbour.ip,port);
 				addVoisin(p.potentiel,voisin);	
 			}
@@ -134,39 +145,54 @@ void checkRecieved (TLV tlv,struct sockaddr_in6 peer){
 
 
 
-		//data
-		case 4 :
-		{
+															//data
+															case 4 :
+															{
 
-		//Traiter le Data
-			uint64_t id = byteToNumber(tlv.body.Data.senderid,64);
-			uint32_t nonce = byteToNumber(tlv.body.Data.nonce,32);
-		//vérifier dans la liste de données réçues la pair (id,nonce)
+															//Traiter le Data
+																uint64_t id = byteToNumber(tlv.body.Data.senderid,64);
+																uint32_t nonce = byteToNumber(tlv.body.Data.nonce,32);
+															//vérifier dans la liste de données réçues la pair (id,nonce)
 
-		//Si ce n'est pas le cas, on affiche 
-			//printf();
-
-
-		//Si c'est le cas : 
-			TLV tlv;
-			newAck(&tlv,id,nonce);
+															//Si ce n'est pas le cas, on affiche 
+																//printf();
 
 
-		//Envoyer un ack a l'envoyeur
-		//sendRequest(tlv);
-			break;
-		}
-		//ack
-		case 5 : 
-		//On supprime des voisins à innonder		
-		break;
+															//Si c'est le cas : 
+																TLV tlv;
+																newAck(&tlv,id,nonce);
+
+
+															//Envoyer un ack a l'envoyeur
+															//sendRequest(tlv);
+																break;
+															}
+															//ack
+															case 5 : 
+															//On supprime des voisins à innonder		
+															break;
 
 		//Goaway
 		case 6 : 
 		//Réagir en fonction du code reçu
+		printf("GoAway %d : %s", tlv.body.GoAway.code, tlv.body.GoAway.message);
 		//Si code == 1 : On retire l'emetteur des voisins
-		//Si code == 2 : Envoyer un hello long
-		//Si code == 3 : Envoyer un hello long
+		if(tlv.body.GoAway.code == 1){
+			Voisin *voisin = isVoisin(p.recent, peer.sin6_addr.s6_addr, peer.sin6_port);
+			if(voisin){
+				supprimeVoisin(p.recent,peer.sin6_addr.s6_addr);
+				addVoisin(p.potentiel,voisin);
+			}
+		}	
+		//Si code == 2 || 3: Envoyer un hello long
+		if(tlv.body.GoAway.code == 2 || tlv.body.GoAway.code == 3){
+			TLV tlv;
+			Voisin *v = isVoisin(p.recent,peer.sin6_addr.s6_addr, peer.sin6_port);
+			if(v!=NULL){
+				newHelloLong(&tlv,p.id,  v->id);
+				sendRequest(s, peer, &tlv);
+			}
+		}
 
 		//Retirer le recepteur des voisins symmétriques/ou retirer de la liste tout court
 		//LE garder dans les potentiels voisins
@@ -174,7 +200,7 @@ void checkRecieved (TLV tlv,struct sockaddr_in6 peer){
 
 		//Warning
 		case 7 : 
-		//Montrer le message warning
+		printf("Message warning : %s",tlv.body.Warning.message);
 		printf("Un message d'erreur : \n");
 		break;
 
@@ -193,7 +219,7 @@ void checkRecieved (TLV tlv,struct sockaddr_in6 peer){
 
 
 
-void createRequest(unsigned char *req, TLV *tlv, int nbrTLV){// Datagramme-->Magic,Version,Body(type,longeur,valeur d'un corp de TLV)
+int createRequest(unsigned char *req, TLV *tlv, int nbrTLV){// Datagramme-->Magic,Version,Body(type,longeur,valeur d'un corp de TLV)
 	
 	    //Header
   req[0] = 93; //Magic
@@ -256,11 +282,30 @@ void createRequest(unsigned char *req, TLV *tlv, int nbrTLV){// Datagramme-->Mag
   		//On passe au TLV suivant
   		j++;
   }
+  	return alltlvlen+4;
+}
 
 
 
-  printf("Requête : ");
-  for (int i = 0 ; i <  alltlvlen + 4 ; i++) { printf("%.2d ", req[i]); }
+
+int sendRequest(int s,struct sockaddr_in6 peer, TLV *tlvs){
+	unsigned char req[4096] = {0};
+	int lenreq = createRequest(req,tlvs,2);
+	
+	// char str[4078];
+	// 		strcpy(str,(char*)req);
+	// 		printf("\n\n\nLA STR : %s \n\n\n\n",str);
+	 int rc=sendto(s,req,lenreq,0, (struct sockaddr*)&peer,sizeof(struct sockaddr_in6)) ;
+	printf("\nRequête envoyée : ");
+
+	for(int i=0;i<lenreq;i++){printf("%.2d ",req[i]);}
+		printf("\n");
+	if(rc < 0) {
+      		fprintf(stderr,"Error recev\n");
+      		return 0;
+    	}
+    	else
+		return 1;
 }
 
 
@@ -268,6 +313,40 @@ void createRequest(unsigned char *req, TLV *tlv, int nbrTLV){// Datagramme-->Mag
 
 
 
+void Envoi_Court(int s,Liste_Voisin *l){
+	TLV tlv;
+	newHelloCourt(&tlv,1024);
+	Voisin *v;
+	v=l->first;
+	struct sockaddr_in6 peer;
+	while(v!=NULL){//ENvoi d'un meme Hello Court à chaque voisin
+		peer.sin6_family = AF_INET6;
+		peer.sin6_port = v->port;
+		memcpy(peer.sin6_addr.s6_addr, v->ip,16);
+		sntp_req(s,peer,&tlv);
+		v=v->next;
+	}
+	
+}
+
+
+
+void Envoi_Long(int s,Liste_Voisin *l){
+	TLV tlv;
+	Voisin *v;
+	v=l->first;
+
+	struct sockaddr_in6 peer;
+	while(v!=NULL){//envoi de Hello long different à chaque voisin
+		peer.sin6_family = AF_INET6;
+		peer.sin6_port = v->port;
+		memcpy(peer.sin6_addr.s6_addr, v->ip,16);
+		newHelloLong(&tlv,p.id,v->id);
+		sendRequest(s,peer,&tlv);
+		v=v->next;
+	}
+	
+}
 
 
 

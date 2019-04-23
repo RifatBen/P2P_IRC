@@ -43,20 +43,13 @@ void decomposeRequest(unsigned char *req, TLV *tlv){
 			//Si c'est un hello court
 			if(tlv->length==8){
 				//On remplit le source id seulement
-				for(int i=0;i<8;i++){
-					tlv->body.Hello.sourceid[i] = req[2+i];
-				}				
+				memcpy(tlv->body.Hello.sourceid,req+2,8);
 			}
 
 			//Si c'est un hello long
 			if(tlv->length == 16){
-
-				//on remplit le sourceid & le destId en même temps;
-				for(int i=0;i<8;i++){
-					tlv->body.Hello.sourceid[i] = req[2+i];
-					tlv->body.Hello.destinationid[i] = req[10+i];
-				}
-
+				memcpy(tlv->body.Hello.sourceid,req+2,8);
+				memcpy(tlv->body.Hello.destinationid,req+2,8);
 			}
 
 			break;
@@ -64,25 +57,32 @@ void decomposeRequest(unsigned char *req, TLV *tlv){
 
 		case 3:{
 			//On remplit le TLV avec l'ip
-			for(int i=0;i<16;i++){
-				tlv->body.Neighbour.ip[i] = req[2+i];
-			}
+			memcpy(tlv->body.Neighbour.ip,req+2,16);
 			//On remplit le TLV avec le port
-			tlv->body.Neighbour.port[0] = req[18];
-			tlv->body.Neighbour.port[1] = req[19];
+			memcpy(tlv->body.Neighbour.port,req+18,2);
 
 			break;
 		}
 
+
+		case 4:{
+			memcpy(tlv->body.Data.senderid,req+2,8);
+			memcpy(tlv->body.Data.nonce, req+10,4);
+			tlv->body.Data.type=req[14];
+			memset(tlv->body.Data.data,0,4065);
+			memcpy(tlv->body.Data.data,req+15,tlv->length-13);
+			break;
+		}
+
 		case 6:{
-			tlv->length = req[1];
 			tlv->body.GoAway.code = req[2];
 			strcpy(tlv->body.GoAway.message,(char*)req+3);
+			break;
 		}
 
 		case 7:{
-			tlv->length = req[1];
 			strcpy(tlv->body.Warning.message,(char*)req+3);
+			break;
 		}
 
 		default: {
@@ -102,7 +102,6 @@ void checkRecieved (int s,TLV tlv,struct sockaddr_in6 peer){
 		//Hello
 		case 2 :
 		{
-
 			Voisin *v=isVoisin(p.recent, peer.sin6_addr.s6_addr, peer.sin6_port);
 			if(tlv.length==8){
 				if(v==NULL){
@@ -136,7 +135,7 @@ void checkRecieved (int s,TLV tlv,struct sockaddr_in6 peer){
 
 
 
-		//Ce TLV indique que le récepteur a une relation de voisinage symétrique avec un pair à l’adresseIPet écoutant sur le port UDPPort. Les adresses IPv6 sont représentées telles quelles, les adressesIPv4 sont représentées sous formeIPv4-Mapped(dans le préfixe::FFFF:0:0/96).
+		//Ce TLV indique que le récepteur a une relation de voisinage symétrique avec un pair à l’adresseIPet écoutant sur le port UDP Port.
 			break;
 		}
 
@@ -147,30 +146,47 @@ void checkRecieved (int s,TLV tlv,struct sockaddr_in6 peer){
 
 															//data
 															case 4 :
-															{
+															{	
+															//Traiter le Data 
 
-															//Traiter le Data
-																uint64_t id = byteToNumber(tlv.body.Data.senderid,64);
-																uint32_t nonce = byteToNumber(tlv.body.Data.nonce,32);
+																Data *newData = recentData(tlv.body.Data.senderid,tlv.body.Data.nonce);
 															//vérifier dans la liste de données réçues la pair (id,nonce)
-
 															//Si ce n'est pas le cas, on affiche 
-																//printf();
-
-
-															//Si c'est le cas : 
-																TLV tlv;
-																newAck(&tlv,id,nonce);
-
-
-															//Envoyer un ack a l'envoyeur
-															//sendRequest(tlv);
+																if(newData == NULL){
+																	//Si le type de Data est 0, on affiche
+																	if(tlv.body.Data.type==0)
+																		printf("\"%s\"\n\n",tlv.body.Data.data);
+																	newData = newFloodData(tlv.body.Data.senderid,tlv.body.Data.nonce,tlv.body.Data.data);
+																	//On supprime l'emetteur du message Data
+																	addData(newData);
+																}
+																													
+																//Envoyer un ack a l'emetteur
+																TLV newTlv;
+																newAck(&newTlv, tlv.body.Data.senderid, tlv.body.Data.nonce);																	
+																sendRequest(s,peer,&newTlv);
+																//On supprime l'emetteur du message Data
+																supprimeVoisin(newData->toFlood, peer.sin6_addr.s6_addr);
+																afficheListe(newData->toFlood);
+																//Innonder le message aux voisins ssymétriques
+																flood(s,newData);
 																break;
 															}
 															//ack
-															case 5 : 
-															//On supprime des voisins à innonder		
-															break;
+															case 5 : {
+																printf("dja ackddddddddddddd\n\n");
+																//On vérifie si c'est un Ack d'une donnée qu'on a
+																Data *newData = recentData(tlv.body.Ack.senderid,tlv.body.Ack.nonce);
+																if(newData != NULL){
+																	printf("dans le if");
+																	supprimeVoisin(newData->toFlood,peer.sin6_addr.s6_addr);
+																}
+																else{
+																	printf("dans le else");
+																}
+
+																break;
+															}	
 
 		//Goaway
 		case 6 : 
@@ -206,7 +222,6 @@ void checkRecieved (int s,TLV tlv,struct sockaddr_in6 peer){
 
 		//0, PadN ou autres
 		default : 
-		printf("Un packet à ignorer a été reçu\n");
 		//a Ignorer
 		break;
 	}
@@ -215,7 +230,29 @@ void checkRecieved (int s,TLV tlv,struct sockaddr_in6 peer){
 
 
 
+void flood(int s,Data *data){
+	TLV tlv;
+	newData(&tlv,data->senderid, data->nonce, data->type, data->message);
+	Voisin *v;
+	struct sockaddr_in6 peer;
+	for(int i=0;i<5;i++){
+		v=data->toFlood->first;
+		//Attendre 2^i seconde avec un select
+		while(v!=NULL){//ENvoi d'un meme Hello Court à chaque voisin
+			peer.sin6_family = AF_INET6;
+			peer.sin6_port = v->port;
+			memcpy(peer.sin6_addr.s6_addr, v->ip,16);
+			sendRequest(s,peer,&tlv);
+			v=v->next;
+		}
+		
 
+	}
+
+	//Envoyer GoAway code 2 a tt ceux qui restent
+	//supprimer des voisins récent
+	//Ajouter dans les voisins potentiel
+}
 
 
 
@@ -272,7 +309,30 @@ int createRequest(unsigned char *req, TLV *tlv, int nbrTLV){// Datagramme-->Magi
 	  			break;
 	  		}
 
-  		}	
+	  		case 4:{
+	  			for(int k=0;k<8;k++)
+	  				req[i++]=tlv[j].body.Data.senderid[k];
+	  			
+	  			for(int k=0;k<4;k++)
+	  				req[i++]=tlv[j].body.Data.nonce[k];
+	  			
+	  			req[i++]=tlv[j].body.Data.type;
+	  			for(int k=0;k<strlen(tlv[j].body.Data.data);k++)
+	  				req[i++]=tlv[j].body.Data.data[k];
+
+	  			break;
+	  		}
+	  		case 5:{
+	  			for(int k=0;k<8;k++)
+	  				req[i++]=tlv[j].body.Ack.senderid[k];
+	  			
+	  			for(int k=0;k<4;k++)
+	  				req[i++]=tlv[j].body.Ack.nonce[k];
+	  			break;
+	  		}
+
+  		}
+  		  		j++;	
   	}
 
   	//Si c'est un TLV Pad1
@@ -290,22 +350,22 @@ int createRequest(unsigned char *req, TLV *tlv, int nbrTLV){// Datagramme-->Magi
 
 int sendRequest(int s,struct sockaddr_in6 peer, TLV *tlvs){
 	unsigned char req[4096] = {0};
-	int lenreq = createRequest(req,tlvs,2);
+	int lenreq = createRequest(req,tlvs,1);
 	
 	// char str[4078];
 	// 		strcpy(str,(char*)req);
 	// 		printf("\n\n\nLA STR : %s \n\n\n\n",str);
 	 int rc=sendto(s,req,lenreq,0, (struct sockaddr*)&peer,sizeof(struct sockaddr_in6)) ;
-	printf("\nRequête envoyée : ");
+	// printf("\nRequête envoyée : ");
 
-	for(int i=0;i<lenreq;i++){printf("%.2d ",req[i]);}
-		printf("\n");
+	// for(int i=0;i<lenreq;i++){printf("%c ",req[i]);}
+	// 	printf("\n");
 	if(rc < 0) {
       		fprintf(stderr,"Error recev\n");
       		return 0;
     	}
     	else
-		return 1;
+    		return 1;
 }
 
 
@@ -391,21 +451,21 @@ void newNeighbour(TLV *message, unsigned char *ip, uint16_t port){
 	numberToByte(port,message->body.Neighbour.port,16);
 }
 
-void newData(TLV *message, uint64_t senderid, uint32_t nonce, unsigned char type,  char *data ){
+void newData(TLV *message, unsigned char * senderid, unsigned char * nonce, unsigned char type,  char *data ){
 	message->type = 4;
-	message->length = 9 + strlen(data);
-	numberToByte(senderid,message->body.Data.senderid,32);
-	numberToByte(nonce,message->body.Data.nonce,32);
+	message->length = 13 + strlen(data);
+ 	memcpy(message->body.Data.senderid,senderid,8);
+ 	memcpy(message->body.Data.nonce,nonce,4);
 	message->body.Data.type = type;
-	strncpy(message->body.Data.data, data, 4065);
+	strncpy(message->body.Data.data, data, strlen(data));
 
 }
 
-void newAck(TLV *message, uint64_t senderid, uint64_t nonce){
+void newAck(TLV *message, unsigned char * senderid, unsigned char * nonce){
 	message->type = 5;
-	message->length = 8;
-	numberToByte(senderid,message->body.Data.senderid,32);
-	numberToByte(nonce,message->body.Data.nonce,32);
+	message->length = 8+4;
+ 	memcpy(message->body.Ack.senderid,senderid,8);
+ 	memcpy(message->body.Ack.nonce,nonce,4);
 } 
 
 //Convertie un nombre en Unsigned Char Big Endian

@@ -28,7 +28,7 @@ typedef struct TLV {
 			struct{
 				unsigned char senderid[8];
 				unsigned char nonce[4];
-				short type;
+				unsigned char type;
 				char data[4065];
 			}Data;
 
@@ -38,7 +38,7 @@ typedef struct TLV {
 			}Ack;
 
 			struct{
-				int code;
+				unsigned char code;
 				char message[4077];
 			}GoAway;
 
@@ -59,7 +59,7 @@ typedef struct Voisin{
 	time_t shorthello;
 	time_t longhello;
 	struct Voisin *next;
-	struct Voisin *prev;
+	struct Voisin *prev;   
 
 
 }Voisin;
@@ -70,10 +70,29 @@ typedef struct Liste_Voisin{
 	Voisin *last;
 }Liste_Voisin;
 
+typedef struct Data{
+	unsigned char senderid[8];
+	unsigned char nonce[4];
+	unsigned char type;
+	char message[4065];
+
+
+	Liste_Voisin *toFlood;
+	short counter;
+	struct Data *next;
+	struct Data *prev;
+}Data;
+
+typedef struct Liste_Data{
+	Data *first;
+	Data *last;
+}Liste_Data;
+
 typedef struct Peer{
 	uint64_t id;
 	Liste_Voisin *potentiel;
 	Liste_Voisin *recent;
+	Liste_Data *datas;
 }Peer;
 
 
@@ -93,4 +112,16 @@ void supprimeVoisin(Liste_Voisin *l,unsigned char* ip2);
 
 void afficheListe(Liste_Voisin *list);
 
+Liste_Voisin *getSymmetricals(Liste_Voisin *list);
+
+Voisin *copyOf(Voisin *voisin);
+
+Data *recentData(unsigned char *senderid, unsigned char *nonce);
+
+Data *newFloodData (unsigned char *senderid, unsigned char *nonce, unsigned char *data);
+
+void addData(Data *newData);
+
+
+void afficheDatas(Liste_Data *list);
 #endif

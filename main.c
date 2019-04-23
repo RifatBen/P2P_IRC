@@ -47,31 +47,34 @@ int main(){
 	fillSocket(&peer);
 
   //On crée notre TLV Hello court (Ou nimporte quel autre TLV grace aux fonctions dont on dispose)
-	TLV tlv, tlv2;
+	TLV tlv,tlv2;
 
-	uint128_t  idProf = 12334436889105333089;
-	newHelloLong(&tlv, p.id, idProf);
-
+	uint128_t  idProf = 11362007626057429800;
+	// newHelloLong(&tlv, p.id, idProf);
+	unsigned char nonce[2];
+	unsigned char ide[8];
+	numberToByte(1094,nonce,16);
+	numberToByte(1092,ide,64);
+	newData(&tlv,ide,nonce,0, "Quelque chose d'interessant");
   //On crée un tableau de TLV qu'on remplit avec les TLV qu'on crée
 	TLV tlvtab[2] = {0};
 	tlvtab[0]=tlv;
 
 
-//On crée un faux hello long
-	uint16_t port = 1111;
-	unsigned char ip[sizeof(struct sockaddr_in6)];
-	char str[INET6_ADDRSTRLEN] = "2a01:e35:8a6e:d2a0:2954:4706:a157:4840";
-  //On convertit l'adresse ip en big endian
-	inet_pton(AF_INET6, str, ip);
+// //On crée un faux hello long
+// 	uint16_t port = 1111;
+// 	unsigned char ip[sizeof(struct sockaddr_in6)];
+// 	char str[INET6_ADDRSTRLEN] = "2a01:e35:8a6e:d2a0:2954:4706:a157:4840";
+//   //On convertit l'adresse ip en big endian
+// 	inet_pton(AF_INET6, str, ip);
 
-  //On crée le TLV neighbour, puis on l'ajoute au tableau
-	newNeighbour(&tlv2,ip,port);
-	tlvtab[1] = tlv2;
+//   //On crée le TLV neighbour, puis on l'ajoute au tableau
+// 	newNeighbour(&tlv2,ip,port);
+// 	tlvtab[1] = tlv2;
   //On crée la requête avec nos tlv
 	// createRequest(req,tlvtab,2);
    // Et on l'envoie à un pair
 	while(1) {
-
   	//On envoie la requete avec les TLV qu'on a créé
 			sendRequest(s,peer,tlvtab);
 
@@ -92,22 +95,27 @@ int main(){
 			for (int i = 0 ; i < rc ; i++) { printf("%.2d ", buf[i]); }
 	      //On vérifie si la requête est bien formée
 				if(Verif(buf,rc)){
-					printf("\nPaquet bien formé!\n");
+					printf("Packet bien forme\n");
+					int cpt=0;
 	        //Décomposer la requete reçue, c'est à dire faire transformer la requete unsigned char en TLV (byteToNumber & numberToByte) 
 					for(int i=4;i<rc;i++){
-						decomposeRequest(buf+i,&tlv);
-						checkRecieved(s,tlv,peer);
+						TLV recvTLV;
+						cpt++;
+						decomposeRequest(buf+i,&recvTLV);
+						checkRecieved(s,recvTLV,peer);
 						i+=buf[i+1]+1;
 					}
-					afficheListe(p.recent);
-					afficheListe(p.potentiel);
+					printf("Il y'a %d TLV.\n",cpt);
+					// afficheListe(p.recent);
+					// afficheListe(p.potentiel);
+					// afficheDatas(p.datas);
 				}
 
 	      //Sinon, on ignore
 
 
 			}
-
+			memset(buf,0,BUF_SIZE);
 		}
 
 		return EXIT_SUCCESS;
@@ -140,7 +148,6 @@ void fillSocket(struct sockaddr_in6 * peer) {
   	struct addrinfo *p = r;
 	if (rc < 0 || p == NULL) {
 		fprintf(stderr, "Bug socket\n");
-		freeaddrinfo(r);
 		exit(1);
 	}
 

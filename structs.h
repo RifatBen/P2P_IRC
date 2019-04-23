@@ -124,4 +124,7 @@ void addData(Data *newData);
 
 
 void afficheDatas(Liste_Data *list);
+
+
+int isEmpty(Liste_Voisin *list);
 #endif

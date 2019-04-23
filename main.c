@@ -49,13 +49,13 @@ int main(){
   //On crée notre TLV Hello court (Ou nimporte quel autre TLV grace aux fonctions dont on dispose)
 	TLV tlv,tlv2;
 
-	uint128_t  idProf = 11362007626057429800;
-	// newHelloLong(&tlv, p.id, idProf);
+	uint128_t  idProf = 7457334412915991477;
+	newHelloLong(&tlv, p.id, idProf);
 	unsigned char nonce[2];
 	unsigned char ide[8];
 	numberToByte(1094,nonce,16);
 	numberToByte(1092,ide,64);
-	newData(&tlv,ide,nonce,0, "Quelque chose d'interessant");
+	// newData(&tlv,ide,nonce,0, "Quelque chose d'interessant");
   //On crée un tableau de TLV qu'on remplit avec les TLV qu'on crée
 	TLV tlvtab[2] = {0};
 	tlvtab[0]=tlv;
@@ -76,11 +76,9 @@ int main(){
    // Et on l'envoie à un pair
 	while(1) {
   	//On envoie la requete avec les TLV qu'on a créé
-			sendRequest(s,peer,tlvtab);
+			// sendRequest(s,peer,tlvtab);
 
 
-  // sendto(s,req,lenreq, 0, &peer, peer_size);
-  // printf("\nEnvoi effectué\n"); 
 
     // Réception d'une requête
 		int rc = recvfrom(s, buf, BUF_SIZE,0,&peer, &peer_size);

@@ -193,3 +193,8 @@ void afficheDatas(Liste_Data *list){
 	}
 
 }
+
+
+int isEmpty(Liste_Voisin *list){
+	return (list->first==NULL)?1:0;
+}

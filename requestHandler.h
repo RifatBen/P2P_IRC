@@ -26,6 +26,8 @@ void newData(TLV *message, unsigned char * senderid, unsigned char *nonce, unsig
 
 void newAck(TLV *message, unsigned char *senderid, unsigned char *nonce);
 
+void newGoAway(TLV *message, unsigned char code, char *msg);
+
 
 
 

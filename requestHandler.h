@@ -33,11 +33,19 @@ void newGoAway(TLV *message, unsigned char code, char *msg);
 
 int Verif(unsigned char *req,int taille);
 void decomposeRequest(unsigned char *req, TLV *tlv);
+
+void *maintenanceVoisins(void *s);
+		
 int createRequest(unsigned char *req, TLV *tlv, int nbrTLV);
-int sendRequest(int s,struct sockaddr_in6 peer, TLV *tlvs);
+int sendRequest(int s,struct sockaddr_in6 peer, TLV *tlvs,int nbrTLV);
 void Envoi_Long(int s,Liste_Voisin *l);
+void Envoi_Court(int s,Liste_Voisin *l);
+
+
 void checkRecieved (int s, TLV tlv ,struct sockaddr_in6 peer);
 
 void flood(int s,Data *data);
+void checkTimes(int s);
+void sendNeighbours(int s);
 
 #endif

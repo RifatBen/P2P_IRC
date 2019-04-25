@@ -11,6 +11,8 @@ Voisin *newVoisin(uint64_t id,unsigned char *ip, uint16_t port){
 	v->symetrique=0;
 	v->next=NULL;
 	v->prev=NULL;
+	v->anyhello = 0;
+	v->longhello = 0;
 	return v;
 }
 
@@ -96,14 +98,14 @@ void afficheListe(Liste_Voisin *list){
 	char str[30];
 	while(current!=NULL){
 		inet_ntop(AF_INET6, current->ip, str, INET6_ADDRSTRLEN);
-		printf("\n(IP : ID :  PORT) : (%s,%llu,%d) \n",str,current->id, current->port);
+		printf("\n(IP : ID :  PORT) : (%s,%lu,%d) \n",str,current->id, current->port);
 		current = current->next;
 	}
 
 }
 
 //Retourne tout les voisins marqués symétriques dans la liste *list
-Liste_Voisin *getSymmetricals(Liste_Voisin *list){
+Liste_Voisin *getSymmetricals(Liste_Voisin *list,int *syms){
 	Liste_Voisin *symetriques = (Liste_Voisin*)malloc(sizeof(Liste_Voisin));
 	
 
@@ -119,6 +121,7 @@ Liste_Voisin *getSymmetricals(Liste_Voisin *list){
 			if(current->symetrique!=0){
 				symetriques->last->next = copyOf(current);
 				symetriques->last = symetriques->last->next;
+				if(syms!=NULL) *syms+=1;
 			}
 			current = current->next;
 		}
@@ -140,12 +143,12 @@ Voisin *copyOf(Voisin *voisin){
 }
 
 
-Data *newFloodData (unsigned char *senderid, unsigned char *nonce, unsigned char *data){
+Data *newFloodData (unsigned char *senderid, unsigned char *nonce, char *data){
 	Data *newData = (Data*)malloc(sizeof(Data));
 	memcpy(newData->senderid,senderid,64);
 	memcpy(newData->nonce,nonce,32);
 	memcpy(newData->message,data,4065);
-	newData->toFlood = getSymmetricals(p.recent);
+	newData->toFlood = getSymmetricals(p.recent,NULL);
 	newData->counter = 0;
 	newData->next=NULL;
 	newData->prev = NULL;
@@ -184,15 +187,14 @@ void addData(Data *newData){
 
 
 
-void afficheDatas(Liste_Data *list){
-	Data *current = list->first;
-	char str[30];
-	while(current!=NULL){
-		printf("\n(ID : Nonce :  Message ) : (%llu,%llu, %s) \n",current->senderid, current->nonce, current->message);
-		current = current->next;
-	}
+// void afficheDatas(Liste_Data *list){
+// 	Data *current = list->first;
+// 	while(current!=NULL){
+// 		printf("\n(ID : Nonce :  Message ) : (%llu,%llu, %s) \n",current->senderid, current->nonce, current->message);
+// 		current = current->next;
+// 	}
 
-}
+// }
 
 
 int isEmpty(Liste_Voisin *list){

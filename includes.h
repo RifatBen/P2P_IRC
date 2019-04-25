@@ -13,7 +13,8 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <unistd.h>
+#include "time.h"
 #include "math.h"
-
+#include "pthread.h"
 
 #endif

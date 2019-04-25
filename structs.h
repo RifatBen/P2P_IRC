@@ -56,7 +56,7 @@ typedef struct Voisin{
 	uint16_t port;
 	short symetrique;
 
-	time_t shorthello;
+	time_t anyhello;
 	time_t longhello;
 	struct Voisin *next;
 	struct Voisin *prev;   
@@ -112,13 +112,13 @@ void supprimeVoisin(Liste_Voisin *l,unsigned char* ip2);
 
 void afficheListe(Liste_Voisin *list);
 
-Liste_Voisin *getSymmetricals(Liste_Voisin *list);
+Liste_Voisin *getSymmetricals(Liste_Voisin *list,int *syms);
 
 Voisin *copyOf(Voisin *voisin);
 
 Data *recentData(unsigned char *senderid, unsigned char *nonce);
 
-Data *newFloodData (unsigned char *senderid, unsigned char *nonce, unsigned char *data);
+Data *newFloodData (unsigned char *senderid, unsigned char *nonce, char *data);
 
 void addData(Data *newData);
 

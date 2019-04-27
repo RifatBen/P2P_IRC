@@ -96,6 +96,15 @@ typedef struct Peer{
 }Peer;
 
 
+typedef struct pthread_args{
+	int s;
+	TLV tlv;
+	struct sockaddr_in6 peer;
+}pthread_args;
+
+
+extern pthread_mutex_t lock; 
+
 
 extern Peer p;
 

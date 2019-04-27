@@ -13,12 +13,19 @@ void fillSocket(struct sockaddr_in6 * peer);
 
 Peer p;
 
+pthread_mutex_t lock; 
 
 int main(){
 
 	pthread_t t; 
 	initPeer(&p);
 
+	//Init le lock
+	if (pthread_mutex_init(&lock, NULL) != 0){ 
+        printf("\n mutex init has failed\n"); 
+        return 1; 
+    } 
+  
 
 	unsigned char buf [BUF_SIZE] = {0}; // Buffer de réception
 
@@ -46,10 +53,13 @@ int main(){
   //Remplit l'adresse client du prof
 	fillSocket(&peer);
 
-	Voisin *v = newVoisin(0, peer.sin6_addr.s6_addr, peer.sin6_port);
-	addVoisin(p.potentiel,v);
+	//Ajout du client Juliusz aux voisins potentiels
+	addVoisin(p.potentiel,newVoisin(0, peer.sin6_addr.s6_addr, peer.sin6_port));
   //On crée notre TLV Hello court (Ou nimporte quel autre TLV grace aux fonctions dont on dispose)
 	TLV tlv;
+
+	newNeighbour(&tlv,peer.sin6_addr.s6_addr, peer.sin6_port);
+
 
 	unsigned char nonce[2];
 	unsigned char ide[8];
@@ -61,7 +71,8 @@ int main(){
 
 	while(1) {
   	//On envoie la requete avec les TLV qu'on a créé
-			// sendRequest(s,peer,tlvtab,1);	
+
+			// sendRequest(s,peer,&tlv,1);	
 
 
     // Réception d'une requête
@@ -84,8 +95,9 @@ int main(){
 						TLV recvTLV;
 						cpt++;
 						decomposeRequest(buf+i,&recvTLV);
- 						//pthread_create(&unautrehtread,NULL,checkRecieved,[s,recvTLV,peer]);
-						checkRecieved(s,recvTLV,peer);
+						pthread_args args = {s,recvTLV,peer};
+ 						//pthread_create(&t,NULL,&checkRecieved,(void *)&args);
+						checkRecieved((void*)&args);
 						i+=buf[i+1]+1;
 					}
 					printf("Il y'a %d TLV.\n",cpt);
@@ -129,7 +141,7 @@ void fillSocket(struct sockaddr_in6 * peer) {
 	hints.ai_family = AF_INET6;
 	hints.ai_socktype = SOCK_DGRAM;
 	hints.ai_flags = (AI_V4MAPPED | AI_ALL);
-  	rc = getaddrinfo("jch.irif.fr", "1212", &hints, &r);
+  	rc = getaddrinfo("94.239.109.6", "2020", &hints, &r);
   	struct addrinfo *p = r;
 	if (rc < 0 || p == NULL) {
 		fprintf(stderr, "Bug socket\n");

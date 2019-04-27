@@ -42,7 +42,7 @@ void Envoi_Long(int s,Liste_Voisin *l);
 void Envoi_Court(int s,Liste_Voisin *l);
 
 
-void checkRecieved (int s, TLV tlv ,struct sockaddr_in6 peer);
+void *checkRecieved (void *args);
 
 void flood(int s,Data *data);
 void checkTimes(int s);

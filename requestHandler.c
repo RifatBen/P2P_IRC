@@ -1,5 +1,5 @@
 #include "requestHandler.h"
-
+#include "hexdump.h"
 
 
 
@@ -94,7 +94,13 @@ void decomposeRequest(unsigned char *req, TLV *tlv){
 
 
 //Des futures réactions lors des récéptions de TLVs
-void checkRecieved (int s,TLV tlv,struct sockaddr_in6 peer){
+void *checkRecieved (void *args){
+	pthread_args *argz = (pthread_args*)args;
+
+	TLV tlv = argz->tlv;
+	struct sockaddr_in6 peer = argz->peer;
+	int s = argz->s;
+
 
 	switch(tlv.type){
 
@@ -114,7 +120,9 @@ void checkRecieved (int s,TLV tlv,struct sockaddr_in6 peer){
 						//On met a jour son id si on ne l'avait pas
 						v->id=byteToNumber(tlv.body.Hello.sourceid,64);
 						//On on le retire des voisins potentiel
+							pthread_mutex_lock(&lock);
 							supprimeVoisin(p.potentiel, v->ip);
+							pthread_mutex_unlock(&lock);
 					}
 
 				//Si ce n'est pas un voisin potentiel
@@ -122,7 +130,9 @@ void checkRecieved (int s,TLV tlv,struct sockaddr_in6 peer){
 						v=newVoisin(byteToNumber(tlv.body.Hello.sourceid,64), peer.sin6_addr.s6_addr, peer.sin6_port);
 						
 			//Dans tous les cas : on met à jours ses temps et on l'ajoute aux recents
+					pthread_mutex_lock(&lock);
 					addVoisin(p.recent,v);
+					pthread_mutex_unlock(&lock);
 				}
 				v->anyhello = currenttime;
 
@@ -130,23 +140,28 @@ void checkRecieved (int s,TLV tlv,struct sockaddr_in6 peer){
 
 			//Si c'rest un hello Long
 			else if(tlv.length==16){
+
 				//Si c'est un voisin recent
+				uint64_t destinationid =byteToNumber(tlv.body.Hello.destinationid,64);
 
 						
 				//Si ce n'est pas un voisin récent
 				if(v==NULL){
+
 					v=isVoisin(p.potentiel, peer.sin6_addr.s6_addr, peer.sin6_port);
 					//Si c'est un voisin potentiel
 					if(v!=NULL){
-						uint64_t destinationid =byteToNumber(tlv.body.Hello.destinationid,64);
-						
-						
+
 						//Si le hello nous est destiné : 
 						if(destinationid == p.id){
 							//on met a jour son id
 							v->id=byteToNumber(tlv.body.Hello.sourceid,64);
+							v->anyhello = currenttime;
+							v->longhello = currenttime;	
 							//On le supprime des potentiel
+							pthread_mutex_lock(&lock);
 							supprimeVoisin(p.potentiel,v->ip);
+							pthread_mutex_unlock(&lock);
 						}
 						else{
 							//Sinon 
@@ -156,22 +171,37 @@ void checkRecieved (int s,TLV tlv,struct sockaddr_in6 peer){
 							sendRequest(s,peer,&tlv,1);
 						}
 					}
-
-					//S'il n'est ni voisin potentiel, ni récent, alors on le crée
+					//S'il n'est ni voisin potentiel, ni récentt, alors on le crée
 					else
 						v=newVoisin(byteToNumber(tlv.body.Hello.sourceid,64), peer.sin6_addr.s6_addr, peer.sin6_port);
 
 					//On l'ajoute aux voisins récents et on met a jour sa symétrie
+					pthread_mutex_lock(&lock);
 					addVoisin(p.recent,v);
-
+					pthread_mutex_unlock(&lock);
 				}
+
+				//Si c'est un voisin récent
+				else{
 				//On met a jour ses temps
-					v->anyhello = currenttime;
-					v->longhello = currenttime;					
-					v->symetrique=1;
+					if(destinationid == p.id){
+						//on met a jour son id
+						v->id=byteToNumber(tlv.body.Hello.sourceid,64);
+						v->anyhello = currenttime;
+						v->longhello = currenttime;					
+						v->symetrique=1;
+					}
+					else{
+						//Sinon 
+							//GoAway ce n'est pas mon id!
+							TLV newTLV;
+							newGoAway(&newTLV, 3, "You sent me a hello with an id which is not mine!");
+							sendRequest(s,peer,&tlv,1);
+					}
+				}
 				// printf("l'id : %llu",byteToNumber(tlv.body.Hello.sourceid,64));
 			}
-
+			v->anyhello = currenttime;
 
 			break;
 		}
@@ -189,7 +219,9 @@ void checkRecieved (int s,TLV tlv,struct sockaddr_in6 peer){
 				voisin = isVoisin(p.recent,tlv.body.Neighbour.ip,portneighbour);
 				if(voisin==NULL){
 					voisin = newVoisin(0,tlv.body.Neighbour.ip,port);
-					addVoisin(p.potentiel,voisin);	
+					pthread_mutex_lock(&lock);
+					addVoisin(p.potentiel,voisin);
+					pthread_mutex_unlock(&lock);	
 				}
 			}
 
@@ -218,14 +250,18 @@ void checkRecieved (int s,TLV tlv,struct sockaddr_in6 peer){
 					printf("\"%s\"\n\n",tlv.body.Data.data);
 				newData = newFloodData(tlv.body.Data.senderid,tlv.body.Data.nonce,tlv.body.Data.data);
 				//On supprime l'emetteur du message Data
+				pthread_mutex_lock(&lock);
 				addData(newData);
+				pthread_mutex_unlock(&lock);
 			}
 			//Envoyer un ack a l'emetteur
 			TLV newTlv;
 			newAck(&newTlv, tlv.body.Data.senderid, tlv.body.Data.nonce);																	
 			sendRequest(s,peer,&newTlv,1);
 			//On supprime l'emetteur du message Data
+			pthread_mutex_lock(&lock);
 			supprimeVoisin(newData->toFlood, peer.sin6_addr.s6_addr);
+			pthread_mutex_unlock(&lock);
 			//Innonder le message aux voisins ssymétriques
 			flood(s,newData);
 			break;
@@ -239,7 +275,9 @@ void checkRecieved (int s,TLV tlv,struct sockaddr_in6 peer){
 		//On vérifie si c'est un Ack d'une donnée qu'on a
 			Data *newData = recentData(tlv.body.Ack.senderid,tlv.body.Ack.nonce);
 			if(newData != NULL){
+			pthread_mutex_lock(&lock);
 				supprimeVoisin(newData->toFlood,peer.sin6_addr.s6_addr);
+				pthread_mutex_unlock(&lock);
 			}
 
 			break;
@@ -254,8 +292,10 @@ void checkRecieved (int s,TLV tlv,struct sockaddr_in6 peer){
 		if(tlv.body.GoAway.code == 1){
 			Voisin *voisin = isVoisin(p.recent, peer.sin6_addr.s6_addr, peer.sin6_port);
 			if(voisin){
+				pthread_mutex_lock(&lock);
 				supprimeVoisin(p.recent,peer.sin6_addr.s6_addr);
 				addVoisin(p.potentiel,voisin);
+				pthread_mutex_unlock(&lock);
 			}
 		}	
 		//Si code == 2 || 3: Envoyer un hello long
@@ -327,10 +367,12 @@ void flood(int s,Data *data){
 		newGoAway(&tlv,2,"Didn't recieve Ack from you!");
 		sendRequest(s,peer,&tlv,1
 			);
+			//Ajouter dans les voisins potentiel
+		pthread_mutex_lock(&lock);
 			//supprimer des voisins récent
 		supprimeVoisin(p.recent, v->ip);
-			//Ajouter dans les voisins potentiel
 		addVoisin(p.potentiel, v);
+		pthread_mutex_unlock(&lock);
 		v=v->next;
 	}
 	
@@ -343,8 +385,7 @@ void *maintenanceVoisins(void *s){
 		Envoi_Court((int)s,p.potentiel);
 		if(i%2==0)
 			Envoi_Long((int)s,p.recent);
-		if(i==2){
-			printf("neb3at neighbour");
+		if(i==10){
 			sendNeighbours((int)s);
 			i=0;
 		}
@@ -362,14 +403,15 @@ void checkTimes(int s){
 	while(v!=NULL){
 		if(v->symetrique == 1){
 			if(currenttime - v->longhello > 120){
-
-				
 				v->symetrique = 0;
 			}
 		}
 		if(currenttime - v->anyhello > 120){
+			printf("%d %d\n\n",currenttime, v->anyhello);
+				pthread_mutex_lock(&lock);
 				supprimeVoisin(p.recent,v->ip);
 				addVoisin(p.potentiel,v);
+				pthread_mutex_unlock(&lock);
 				TLV tlv;
 				newGoAway(&tlv, 2, "Didn't get a Hello from you!");
 				struct sockaddr_in6 peer;
@@ -489,9 +531,9 @@ int sendRequest(int s,struct sockaddr_in6 peer, TLV *tlvs,int nbrTLV){
 	// 		strcpy(str,(char*)req);
 	// 		printf("\n\n\nLA STR : %s \n\n\n\n",str);
 	int rc=sendto(s,req,lenreq,0, (struct sockaddr*)&peer,sizeof(struct sockaddr_in6)) ;
-	// printf("\nRequête envoyée : ");
+	 // printf("\nRequête envoyée : ");
 
-	// for(int i=0;i<lenreq;i++){printf("%c ",req[i]);}
+	// for(int i=0;i<lenreq;i++){printf("%.2d",req[i]);}
 	// 	printf("\n");
 	if(rc < 0) {
 		char str[30];

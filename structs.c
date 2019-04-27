@@ -17,6 +17,7 @@ Voisin *newVoisin(uint64_t id,unsigned char *ip, uint16_t port){
 }
 
 void addVoisin(Liste_Voisin *list, Voisin *newVoisin){
+
 		if(list->first==NULL){
 			list->first = newVoisin;
 			list->last = newVoisin;	
@@ -26,10 +27,10 @@ void addVoisin(Liste_Voisin *list, Voisin *newVoisin){
 			newVoisin->prev = list->last;
 			list->last = newVoisin;
 		}
-
 }
 
 void supprimeVoisin(Liste_Voisin *l, unsigned char* ip2){
+
 	Voisin *v;
 	if(l->first){
 		v=l->first;
@@ -59,6 +60,7 @@ void supprimeVoisin(Liste_Voisin *l, unsigned char* ip2){
 
 		}
 	}
+
 }
 		
 
@@ -106,6 +108,7 @@ void afficheListe(Liste_Voisin *list){
 
 //Retourne tout les voisins marqués symétriques dans la liste *list
 Liste_Voisin *getSymmetricals(Liste_Voisin *list,int *syms){
+
 	Liste_Voisin *symetriques = (Liste_Voisin*)malloc(sizeof(Liste_Voisin));
 	
 
@@ -171,6 +174,7 @@ Data *recentData(unsigned char *senderid, unsigned char *nonce){
 
 
 void addData(Data *newData){
+
 		Liste_Data *list = p.datas;
 
 		if(list->first==NULL){

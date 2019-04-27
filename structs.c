@@ -35,26 +35,33 @@ void supprimeVoisin(Liste_Voisin *l, unsigned char* ip2){
 	if(l->first){
 		v=l->first;
 
-		if(memcmp(v->ip,ip2,16)==0)
+		if(memcmp(v->ip,ip2,16)==0){
+
 			l->first=v->next;
+			v->next = NULL;
+		}
 
 		v=v->next;
 
 		while(v!=NULL){ 
-			if(memcmp(v->ip,ip2,16)==0)
+			if(memcmp(v->ip,ip2,16)==0){
+
 				break;
+			}
 			v=v->next;
 		}
-
 		if(v!=NULL){
 			if(v->next!=NULL){
+
 				v->prev->next=v->next;
 				v->next->prev=v->prev;
 				v->next = NULL;
 				v->prev = NULL;
 			}
 			else{
+
 				l->last=v->prev;
+				v->prev->next=NULL;
 				v->prev=NULL;
 			}
 

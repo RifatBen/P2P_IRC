@@ -36,8 +36,8 @@ int main(){
 		fprintf(stderr, "Bug socket\n");
 		exit(1);
 	}
-
-	// fcntl(s, F_SETFL, fcntl(s, F_GETFL) | O_NONBLOCK);
+	
+	fcntl(s, F_SETFL, fcntl(s, F_GETFL) | O_NONBLOCK);
 
 	struct sockaddr_in6 sin6 = {0}; 
 
@@ -54,11 +54,20 @@ int main(){
 	fillSocket(&peer);
 
 	//Ajout du client Juliusz aux voisins potentiels
-	addVoisin(p.potentiel,newVoisin(0, peer.sin6_addr.s6_addr, peer.sin6_port));
+	unsigned char moh[sizeof(struct in6_addr)];
+	Voisin *v = newVoisin(0, peer.sin6_addr.s6_addr, peer.sin6_port);
+	addVoisin(p.potentiel,v);
+
+	// inet_pton(AF_INET6, "d813:200::d813:200:0:0", buf);
+	// addVoisin(p.potentiel,newVoisin(1212,moh, peer.sin6_port));
+	// supprimeVoisin(p.potentiel,v->ip);
+
   //On crée notre TLV Hello court (Ou nimporte quel autre TLV grace aux fonctions dont on dispose)
 	TLV tlv;
 
-	newNeighbour(&tlv,peer.sin6_addr.s6_addr, peer.sin6_port);
+
+
+	// newNeighbour(&tlv,peer.sin6_addr.s6_addr, peer.sin6_port);
 
 
 	unsigned char nonce[2];
@@ -67,7 +76,8 @@ int main(){
 	numberToByte(1092,ide,64);
 	// newData(&tlv,ide,nonce,0, "Tarass : Quelque chose d'interessant");
 	pthread_create(&t,NULL,&maintenanceVoisins,(void *)s);
-    
+
+	
 
 	while(1) {
   	//On envoie la requete avec les TLV qu'on a créé
@@ -77,14 +87,11 @@ int main(){
 
     // Réception d'une requête
 		int rc = recvfrom(s, buf, BUF_SIZE,0,&peer, &peer_size);
-		if(rc < 0) {
-			fprintf(stderr,"Error recev,%d\n",rc);
-			exit(1);
-		}
-		if(rc<=4096){
+
+		if(rc<=4096 && rc>=0){
 
 	    // Affichage de la requête reçu
-			printf("\nMessage reçu\n");
+			// printf("\nMessage reçu\n");
 			for (int i = 0 ; i < rc ; i++) { printf("%.2d ", buf[i]); }
 	      //On vérifie si la requête est bien formée
 				if(Verif(buf,rc)){
@@ -141,7 +148,7 @@ void fillSocket(struct sockaddr_in6 * peer) {
 	hints.ai_family = AF_INET6;
 	hints.ai_socktype = SOCK_DGRAM;
 	hints.ai_flags = (AI_V4MAPPED | AI_ALL);
-  	rc = getaddrinfo("94.239.109.6", "2020", &hints, &r);
+  	rc = getaddrinfo("jch.irif.fr", "1212", &hints, &r);
   	struct addrinfo *p = r;
 	if (rc < 0 || p == NULL) {
 		fprintf(stderr, "Bug socket\n");

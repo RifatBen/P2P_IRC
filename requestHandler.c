@@ -119,20 +119,22 @@ void *checkRecieved (void *args){
 					if(v!=NULL){
 						//On met a jour son id si on ne l'avait pas
 						v->id=byteToNumber(tlv.body.Hello.sourceid,64);
+							
 						//On on le retire des voisins potentiel
-							pthread_mutex_lock(&lock);
 							supprimeVoisin(p.potentiel, v->ip);
-							pthread_mutex_unlock(&lock);
+							addVoisin(p.recent,v);
+
 					}
 
 				//Si ce n'est pas un voisin potentiel
-					else
+					else{
 						v=newVoisin(byteToNumber(tlv.body.Hello.sourceid,64), peer.sin6_addr.s6_addr, peer.sin6_port);
+						addVoisin(p.recent,v);
+					}
 						
 			//Dans tous les cas : on met à jours ses temps et on l'ajoute aux recents
-					pthread_mutex_lock(&lock);
-					addVoisin(p.recent,v);
-					pthread_mutex_unlock(&lock);
+
+
 				}
 				v->anyhello = currenttime;
 
@@ -161,6 +163,7 @@ void *checkRecieved (void *args){
 							//On le supprime des potentiel
 							pthread_mutex_lock(&lock);
 							supprimeVoisin(p.potentiel,v->ip);
+							addVoisin(p.recent,v);
 							pthread_mutex_unlock(&lock);
 						}
 						else{
@@ -172,13 +175,10 @@ void *checkRecieved (void *args){
 						}
 					}
 					//S'il n'est ni voisin potentiel, ni récentt, alors on le crée
-					else
+					else{
 						v=newVoisin(byteToNumber(tlv.body.Hello.sourceid,64), peer.sin6_addr.s6_addr, peer.sin6_port);
-
-					//On l'ajoute aux voisins récents et on met a jour sa symétrie
-					pthread_mutex_lock(&lock);
-					addVoisin(p.recent,v);
-					pthread_mutex_unlock(&lock);
+						addVoisin(p.recent,v);
+					}
 				}
 
 				//Si c'est un voisin récent
@@ -219,9 +219,8 @@ void *checkRecieved (void *args){
 				voisin = isVoisin(p.recent,tlv.body.Neighbour.ip,portneighbour);
 				if(voisin==NULL){
 					voisin = newVoisin(0,tlv.body.Neighbour.ip,port);
-					pthread_mutex_lock(&lock);
 					addVoisin(p.potentiel,voisin);
-					pthread_mutex_unlock(&lock);	
+	
 				}
 			}
 
@@ -292,10 +291,10 @@ void *checkRecieved (void *args){
 		if(tlv.body.GoAway.code == 1){
 			Voisin *voisin = isVoisin(p.recent, peer.sin6_addr.s6_addr, peer.sin6_port);
 			if(voisin){
-				pthread_mutex_lock(&lock);
+
 				supprimeVoisin(p.recent,peer.sin6_addr.s6_addr);
 				addVoisin(p.potentiel,voisin);
-				pthread_mutex_unlock(&lock);
+
 			}
 		}	
 		//Si code == 2 || 3: Envoyer un hello long
@@ -365,14 +364,14 @@ void flood(int s,Data *data){
 		peer.sin6_port = v->port;
 		memcpy(peer.sin6_addr.s6_addr, v->ip,16);
 		newGoAway(&tlv,2,"Didn't recieve Ack from you!");
-		sendRequest(s,peer,&tlv,1
-			);
+		sendRequest(s,peer,&tlv,1);
 			//Ajouter dans les voisins potentiel
-		pthread_mutex_lock(&lock);
 			//supprimer des voisins récent
 		supprimeVoisin(p.recent, v->ip);
+		v->symetrique = 0;
+		supprimeVoisin(data->toFlood, v->ip);
 		addVoisin(p.potentiel, v);
-		pthread_mutex_unlock(&lock);
+
 		v=v->next;
 	}
 	
@@ -407,11 +406,10 @@ void checkTimes(int s){
 			}
 		}
 		if(currenttime - v->anyhello > 120){
-			printf("%d %d\n\n",currenttime, v->anyhello);
-				pthread_mutex_lock(&lock);
+			printf("Send GoAway hello\n\n");
 				supprimeVoisin(p.recent,v->ip);
 				addVoisin(p.potentiel,v);
-				pthread_mutex_unlock(&lock);
+
 				TLV tlv;
 				newGoAway(&tlv, 2, "Didn't get a Hello from you!");
 				struct sockaddr_in6 peer;

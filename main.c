@@ -3,15 +3,39 @@
 #include "includes.h"
 #include "structs.h"
 #include "requestHandler.h"
+#include <readline/readline.h>
+#include <readline/history.h>
+#include "parser.h"
 
 #define BUF_SIZE 4096
 #define REQ_SIZE 4096
+
+
+extern int s;
+extern char nick[15] = "NoName";
+
+
+int (*funcs[]) (char **) = {
+	//&irc_nick,
+	&irc_send
+};
+
+char *func_names[] = {
+	// "/nick",
+	"/send"
+};
+
+int SIZE = 64;
+
+void *readcommand(void *nothing);
 
 void initSocket(int s, struct sockaddr_in6 *sin6);
 
 void fillSocket(struct sockaddr_in6 * peer);
 
 Peer p;
+
+unsigned char globalNonce[4];
 
 pthread_mutex_t lock; 
 
@@ -31,7 +55,7 @@ int main(){
 
 
 
-	int s = socket(AF_INET6, SOCK_DGRAM, 0);
+	s = socket(AF_INET6, SOCK_DGRAM, 0);
 	if (s < 0) {
 		fprintf(stderr, "Bug socket\n");
 		exit(1);
@@ -49,41 +73,24 @@ int main(){
 
 	initSocket(s,&sin6);
 
+	//On initialise le nonce
+	randomgen(4,globalNonce);
+
 
   //Remplit l'adresse client du prof
 	fillSocket(&peer);
 
-	//Ajout du client Juliusz aux voisins potentiels
-	unsigned char moh[sizeof(struct in6_addr)];
-	Voisin *v = newVoisin(0, peer.sin6_addr.s6_addr, peer.sin6_port);
+	//On l'ajoute aux voisins potentiels
+	Voisin *v=newVoisin(0, peer.sin6_addr.s6_addr, peer.sin6_port);
 	addVoisin(p.potentiel,v);
 
-	// inet_pton(AF_INET6, "d813:200::d813:200:0:0", buf);
-	// addVoisin(p.potentiel,newVoisin(1212,moh, peer.sin6_port));
-	// supprimeVoisin(p.potentiel,v->ip);
 
-  //On crée notre TLV Hello court (Ou nimporte quel autre TLV grace aux fonctions dont on dispose)
-	TLV tlv;
-
-
-
-	// newNeighbour(&tlv,peer.sin6_addr.s6_addr, peer.sin6_port);
-
-
-	unsigned char nonce[2];
-	unsigned char ide[8];
-	numberToByte(10949,nonce,16);
-	numberToByte(1092,ide,64);
-	// newData(&tlv,ide,nonce,0, "Tarass : Quelque chose d'interessant");
 	pthread_create(&t,NULL,&maintenanceVoisins,(void *)s);
 
-	
+	pthread_create(&t,NULL,&readcommand,NULL);
 
 	while(1) {
   	//On envoie la requete avec les TLV qu'on a créé
-
-			// sendRequest(s,peer,&tlv,1);	
-
 
     // Réception d'une requête
 		int rc = recvfrom(s, buf, BUF_SIZE,0,&peer, &peer_size);
@@ -92,10 +99,9 @@ int main(){
 
 	    // Affichage de la requête reçu
 			// printf("\nMessage reçu\n");
-			for (int i = 0 ; i < rc ; i++) { printf("%.2d ", buf[i]); }
+			// for (int i = 0 ; i < rc ; i++) { printf("%.2d ", buf[i]); }
 	      //On vérifie si la requête est bien formée
 				if(Verif(buf,rc)){
-					printf("Packet bien forme\n");
 					int cpt=0;
 	        //Décomposer la requete reçue, c'est à dire faire transformer la requete unsigned char en TLV (byteToNumber & numberToByte) 
 					for(int i=4;i<rc;i++){
@@ -107,11 +113,11 @@ int main(){
 						checkRecieved((void*)&args);
 						i+=buf[i+1]+1;
 					}
-					printf("Il y'a %d TLV.\n",cpt);
-					printf("LES RECENTS : \n");
-					afficheListe(p.recent);
-					printf("LES POTENTEISL : \n");
-					afficheListe(p.potentiel);
+					// printf("Il y'a %d TLV.\n",cpt);
+					// printf("LES RECENTS : \n");
+					// afficheListe(p.recent);
+					// printf("LES POTENTEISL : \n");
+					// afficheListe(p.potentiel);
 					// afficheDatas(p.datas);
 				}
 
@@ -149,6 +155,7 @@ void fillSocket(struct sockaddr_in6 * peer) {
 	hints.ai_socktype = SOCK_DGRAM;
 	hints.ai_flags = (AI_V4MAPPED | AI_ALL);
   	rc = getaddrinfo("jch.irif.fr", "1212", &hints, &r);
+
   	struct addrinfo *p = r;
 	if (rc < 0 || p == NULL) {
 		fprintf(stderr, "Bug socket\n");
@@ -158,4 +165,24 @@ void fillSocket(struct sockaddr_in6 * peer) {
   // On copie l'adresse dans le pair
 	memmove(peer,p->ai_addr, sizeof(struct sockaddr_in6));
 	freeaddrinfo(r);
+}
+
+
+void *readcommand(void *nothing){
+	char *line;
+
+ 	while(1){
+ 	    char *prompt;
+ 	    prompt="IRC$>";
+ 	    line = readline(prompt);
+ 	    traitement_ligne_de_commande(line);
+ 	    free(line);
+ 	}
+ 	exit(0);
+}
+
+
+
+int funcs_num(){
+	return sizeof(func_names)/sizeof(char*);
 }

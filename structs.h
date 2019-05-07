@@ -100,6 +100,7 @@ typedef struct pthread_args{
 	int s;
 	TLV tlv;
 	struct sockaddr_in6 peer;
+	Data *newData;
 }pthread_args;
 
 
@@ -108,6 +109,8 @@ extern pthread_mutex_t lock;
 
 extern Peer p;
 
+
+extern unsigned char globalNonce[4];
 
 Voisin *newVoisin(uint64_t id,unsigned char *ip, uint16_t port);
 
@@ -127,13 +130,13 @@ Voisin *copyOf(Voisin *voisin);
 
 Data *recentData(unsigned char *senderid, unsigned char *nonce);
 
-Data *newFloodData (unsigned char *senderid, unsigned char *nonce, char *data);
+Data *newFloodData (unsigned char *senderid, unsigned char *nonce, unsigned char type, char *data);
 
 void addData(Data *newData);
 
-
 void afficheDatas(Liste_Data *list);
 
-
 int isEmpty(Liste_Voisin *list);
+
+unsigned char *randomgen (size_t num_bytes, unsigned char *globalNonce);
 #endif

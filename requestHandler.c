@@ -1,5 +1,5 @@
 #include "requestHandler.h"
-#include "hexdump.h"
+
 
 
 
@@ -72,6 +72,11 @@ void decomposeRequest(unsigned char *req, TLV *tlv){
 			memset(tlv->body.Data.data,0,4065);
 			memcpy(tlv->body.Data.data,req+15,tlv->length-13);
 			break;
+		}
+
+		case 5:{
+			memcpy(tlv->body.Ack.senderid, req+2,8);
+			memcpy(tlv->body.Ack.nonce, req+10,4);
 		}
 
 		case 6:{
@@ -246,8 +251,8 @@ void *checkRecieved (void *args){
 			if(newData == NULL){
 				//Si le type de Data est 0, on affiche
 				if(tlv.body.Data.type==0)
-					printf("\"%s\"\n\n",tlv.body.Data.data);
-				newData = newFloodData(tlv.body.Data.senderid,tlv.body.Data.nonce,tlv.body.Data.data);
+					printf("\n%s\n",tlv.body.Data.data);
+				newData = newFloodData(tlv.body.Data.senderid,tlv.body.Data.nonce,tlv.body.Data.type,tlv.body.Data.data);
 				//On supprime l'emetteur du message Data
 				pthread_mutex_lock(&lock);
 				addData(newData);
@@ -262,7 +267,11 @@ void *checkRecieved (void *args){
 			supprimeVoisin(newData->toFlood, peer.sin6_addr.s6_addr);
 			pthread_mutex_unlock(&lock);
 			//Innonder le message aux voisins ssymétriques
-			flood(s,newData);
+			pthread_t t;
+			pthread_args args;
+			args.s = s;
+			args.newData = newData;
+			pthread_create(&t,NULL,&flood,(void *)&args);
 			break;
 		}
 
@@ -272,10 +281,14 @@ void *checkRecieved (void *args){
 		//ack
 		case 5 : {
 		//On vérifie si c'est un Ack d'une donnée qu'on a
+
 			Data *newData = recentData(tlv.body.Ack.senderid,tlv.body.Ack.nonce);
 			if(newData != NULL){
-			pthread_mutex_lock(&lock);
+
+				pthread_mutex_lock(&lock);
 				supprimeVoisin(newData->toFlood,peer.sin6_addr.s6_addr);
+
+				afficheListe(newData->toFlood);
 				pthread_mutex_unlock(&lock);
 			}
 
@@ -329,7 +342,10 @@ void *checkRecieved (void *args){
 
 
 
-void flood(int s,Data *data){
+void *flood(void *args){
+	pthread_args *argz = (pthread_args*)args;
+	Data *data = argz->newData;
+	int s = argz->s;
 	TLV tlv;
 	newData(&tlv,data->senderid, data->nonce, data->type, data->message);
 	Voisin *v;
@@ -545,7 +561,27 @@ int sendRequest(int s,struct sockaddr_in6 peer, TLV *tlvs,int nbrTLV){
 }
 
 
+void sendData(int s,char *nick, char *message){
+	char wholeMessage[4065];
+	strcpy(wholeMessage,nick);
+	strcat(wholeMessage, " : ");
+	strcat(wholeMessage,message);
+	uint32_t nonce = byteToNumber(globalNonce,32) +1;
+	numberToByte(nonce,globalNonce,32); 
 
+	unsigned char id[8];
+	numberToByte(p.id,id,64);
+	Data *newData = newFloodData(id,globalNonce,0,wholeMessage);
+	pthread_mutex_lock(&lock);
+	addData(newData);
+	pthread_mutex_unlock(&lock);
+
+	pthread_t t;
+	pthread_args args;
+	args.newData = newData;
+	args.s = s;
+	pthread_create(&t,NULL,&flood,(void *)&args);
+}
 
 
 

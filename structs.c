@@ -71,9 +71,23 @@ void supprimeVoisin(Liste_Voisin *l, unsigned char* ip2){
 }
 		
 
+unsigned char *randomgen (size_t num_bytes, unsigned char *globalNonce){
+	globalNonce= malloc (num_bytes);
+  size_t i;
+
+  for (i = 0; i < num_bytes; i++)
+  {
+    globalNonce[i] = rand ();
+  }
+
+  return globalNonce;
+}
+
+
 void initPeer(Peer *p){
 	
-	p->id=454554; // c censé être random
+srand ((unsigned int) time (NULL));	
+	p->id=byteToNumber(randomgen(8,NULL),64); 
 	p->potentiel=(Liste_Voisin*)malloc(sizeof(Liste_Voisin)); //ca prend une liste de voisin
 	p->potentiel->first = NULL;
 	p->potentiel->last = NULL;
@@ -153,13 +167,15 @@ Voisin *copyOf(Voisin *voisin){
 }
 
 
-Data *newFloodData (unsigned char *senderid, unsigned char *nonce, char *data){
+Data *newFloodData (unsigned char *senderid, unsigned char *nonce, unsigned char type, char *data){
 	Data *newData = (Data*)malloc(sizeof(Data));
-	memcpy(newData->senderid,senderid,64);
-	memcpy(newData->nonce,nonce,32);
+	memcpy(newData->senderid,senderid,8);
+	memcpy(newData->nonce,nonce,4);
 	memcpy(newData->message,data,4065);
+
 	newData->toFlood = getSymmetricals(p.recent,NULL);
 	newData->counter = 0;
+	newData->type = type;
 	newData->next=NULL;
 	newData->prev = NULL;
 }
@@ -198,14 +214,14 @@ void addData(Data *newData){
 
 
 
-// void afficheDatas(Liste_Data *list){
-// 	Data *current = list->first;
-// 	while(current!=NULL){
-// 		printf("\n(ID : Nonce :  Message ) : (%llu,%llu, %s) \n",current->senderid, current->nonce, current->message);
-// 		current = current->next;
-// 	}
+void afficheDatas(Liste_Data *list){
+	Data *current = list->first;
+	while(current!=NULL){
+		printf("\n(ID : Nonce :  Message ) : (%llu,%llu, %s) \n",current->senderid, current->nonce, current->message);
+		current = current->next;
+	}
 
-// }
+}
 
 
 int isEmpty(Liste_Voisin *list){

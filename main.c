@@ -16,13 +16,15 @@ extern char nick[15] = "NoName";
 
 
 int (*funcs[]) (char **) = {
-	//&irc_nick,
-	&irc_send
+	&irc_nick,
+	&irc_send,
+	&irc_exit
 };
 
 char *func_names[] = {
-	// "/nick",
-	"/send"
+	"/nick",
+	"/send",
+	"/exit"
 };
 
 int SIZE = 64;
@@ -114,10 +116,10 @@ int main(){
 						i+=buf[i+1]+1;
 					}
 					// printf("Il y'a %d TLV.\n",cpt);
-					// printf("LES RECENTS : \n");
-					// afficheListe(p.recent);
-					// printf("LES POTENTEISL : \n");
-					// afficheListe(p.potentiel);
+					 // printf("LES RECENTS : \n");
+					 // afficheListe(p.recent);
+					 // printf("LES POTENTEISL : \n");
+					 // afficheListe(p.potentiel);
 					// afficheDatas(p.datas);
 				}
 

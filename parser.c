@@ -93,3 +93,13 @@ int irc_send(char **args){
 
 	return 1;
 }
+
+int irc_nick(char **args){
+	strcpy(nick,args[1]);
+	printf("Pseudo changé en : %s\n",nick);
+	return 1;
+}
+
+int irc_exit(char **args){
+	exit(1);
+}

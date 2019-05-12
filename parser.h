@@ -33,6 +33,7 @@ int error(char *cmd);
 
 // fonction qui execute une commande grace a une liste d'arguments passés en parametre
 int exec_command(char **args);
-
+int irc_nick(char **args);
 int irc_send(char **args);
+int irc_exit(char **args);
 #endif

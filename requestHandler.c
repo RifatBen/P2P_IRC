@@ -541,23 +541,12 @@ int sendRequest(int s,struct sockaddr_in6 peer, TLV *tlvs,int nbrTLV){
 	unsigned char req[4096] = {0};
 	int lenreq = createRequest(req,tlvs,nbrTLV);
 	
-	// char str[4078];
-	// 		strcpy(str,(char*)req);
-	// 		printf("\n\n\nLA STR : %s \n\n\n\n",str);
 	int rc=sendto(s,req,lenreq,0, (struct sockaddr*)&peer,sizeof(struct sockaddr_in6)) ;
 	 // printf("\nRequête envoyée : ");
 
 	// for(int i=0;i<lenreq;i++){printf("%.2d",req[i]);}
 	// 	printf("\n");
-	if(rc < 0) {
-		char str[30];
-		// inet_ntop(AF_INET6,peer.sin6_addr.s6_addr,str, INET6_ADDRSTRLEN);
-		// fprintf(stderr,"%s \n",str);
-		// perror("sendto");
-		return 0;
-	}
-	else
-		return 1;
+	return 1;
 }
 
 
